@@ -9,4 +9,4 @@ const postUsers = (req,res) => {
 }
 
 
-module.exports = { postUsers, }
+module.exports = { postUsers }
