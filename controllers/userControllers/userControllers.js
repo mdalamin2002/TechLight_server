@@ -19,7 +19,6 @@ const registerUser = async (req, res) => {
     const result = await usersCollections.insertOne(userData);
     res.status(201).send(result);
   } catch (error) {
-    console.log(error);
     res.status(500).send({ message: "Internal server error" });
   }
 };
