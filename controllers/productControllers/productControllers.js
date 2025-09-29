@@ -14,9 +14,19 @@ const createProduct = async (req, res) => {
     }
 }
 
+//Get All Product
+const getAllProducts = async (req, res) => {
+    try {
+        const result = productsCollection.find().toArray();
+        res.status(200).send(result);
+    } catch (error) {
+        res.status(500).send({message:"Internal Server Error"})
+    }
+}
 
-//Get accessories SubCategories Data 
-const accessories = async (req, res) => {
+
+//Get Product Data category wise 
+const getProductsByCategory = async (req, res) => {
     const { category, subCategory } = req.params;
     try {
         const result = await productsCollection.find({category,subCategory }).toArray();
@@ -26,4 +36,4 @@ const accessories = async (req, res) => {
     }
 }
 
-module.exports = { createProduct,accessories };
+module.exports = { createProduct,getProductsByCategory,getAllProducts};

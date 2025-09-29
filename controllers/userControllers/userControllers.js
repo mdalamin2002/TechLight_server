@@ -38,4 +38,14 @@ const loginUser = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser };
+//Get all users
+const getAllUsers = async (req, res) => {
+  try {
+    const result = await usersCollections.find().toArray();
+    res.status(200).send(result);
+  } catch (error) {
+    res.status(500).send({ message: "Internal server error" });
+  }
+}
+
+module.exports = { registerUser, loginUser ,usersCollections,getAllUsers};
