@@ -1,11 +1,12 @@
 const { ObjectId } = require("mongodb");
+const createError = require('http-errors');
 const checkUserStatus = require("../../utils/check_user_status");
 const { client } = require("./../../config/mongoDB");
 const db = client.db("techLight");
 const usersCollections = db.collection("users");
 
 //Register User
-const registerUser = async (req, res) => {
+const registerUser = async (req, res,next) => {
   try {
     const userData = req.body;
 
@@ -22,12 +23,12 @@ const registerUser = async (req, res) => {
     const result = await usersCollections.insertOne(userData);
     res.status(201).send(result);
   } catch (error) {
-    res.status(500).send({ message: "Internal server error" });
+    next(error)
   }
 };
 
 //Login User
-const loginUser = async (req, res) => {
+const loginUser = async (req, res,next) => {
   try {
     const email = req.params.email;
     const decodedEmail = req.decoded;
@@ -42,22 +43,22 @@ const loginUser = async (req, res) => {
     }
     res.status(200).send(user);
   } catch (error) {
-    res.status(500).send({ message: "Internal server error" });
+    next(error)
   }
 };
 
 //Get all users
-const getAllUsers = async (req, res) => {
+const getAllUsers = async (req, res,next) => {
   try {
     const result = await usersCollections.find().toArray();
     res.status(200).send(result);
   } catch (error) {
-    res.status(500).send({ message: "Internal server error" });
+    next(error)
   }
 };
 
 //Update user role
-const updateUserRole = async (req, res) => {
+const updateUserRole = async (req, res,next) => {
   try {
     const userId = req.params.id;
     const { newRole } = req.body;
@@ -70,7 +71,7 @@ const updateUserRole = async (req, res) => {
     const result = await usersCollections.updateOne(query, updateRole);
     res.status(200).send(result);
   } catch (error) {
-    res.status(500).send({ message: "Internal server error" });
+    next(error)
   }
 };
 
