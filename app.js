@@ -4,6 +4,7 @@ const cors = require("cors");
 const userRouter = require("./routes/userRoutes/userRoutes");
 const productRouter = require('./routes/productRoutes/productRoutes')
 const createError = require('http-errors');
+const categoryRouter = require("./routes/productRoutes/categoryRoutes");
 
 //middleware
 app.use(cors());
@@ -18,6 +19,7 @@ app.get("/", (req, res) => {
 //Main routes 
 app.use('/api/users', userRouter);
 app.use('/api/products', productRouter);
+app.use('/api/products/categories', categoryRouter);
 
 
 //Client side errors

@@ -1,3 +1,4 @@
+const { ObjectId } = require("mongodb");
 const { client } = require("./../../config/mongoDB");
 const db = client.db("techLight");
 const createError = require('http-errors');
@@ -7,7 +8,9 @@ const productsCollection = db.collection("products");
 const createProduct = async (req, res,next) => {
     try {
         const productData = req.body;
+        productData.status = "active"
         productData.created_at = new Date();
+        productData.updated_at = new Date();
         const result = await productsCollection.insertOne(productData);
         res.status(201).send(result)
     } catch (error) {
@@ -18,8 +21,23 @@ const createProduct = async (req, res,next) => {
 //Get All Product
 const getAllProducts = async (req, res,next) => {
     try {
-        const result = productsCollection.find().toArray();
+        const result = await productsCollection.find({ status: { $ne: "inactive" } }).toArray();
         res.status(200).send(result);
+    } catch (error) {
+        next(error)
+    }
+}
+
+//Update product 
+const deleteProduct = async (req, res, next) => {
+    try {
+        const productId = req.params.id;
+        const query = { _id: new ObjectId(productId) };
+        const updatedProduct = {
+            $set:{status:"inactive"}
+        }
+        const result = await productsCollection.updateOne(query, updatedProduct);
+        res.status(200).send(result)
     } catch (error) {
         next(error)
     }
@@ -37,4 +55,4 @@ const getProductsByCategory = async (req, res,next) => {
     }
 }
 
-module.exports = { createProduct,getProductsByCategory,getAllProducts};
+module.exports = { createProduct,getProductsByCategory,getAllProducts,deleteProduct};

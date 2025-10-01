@@ -20,6 +20,7 @@ const registerUser = async (req, res,next) => {
     userData.role = "user";
     userData.status = "active";
     userData.created_at = new Date();
+    userData.updated_at = new Date();
     const result = await usersCollections.insertOne(userData);
     res.status(201).send(result);
   } catch (error) {
