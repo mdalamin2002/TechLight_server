@@ -1,7 +1,10 @@
 const express = require("express");
 const app = express();
 const cors = require("cors");
-const userRoutes = require('./routes/userRoutes/userRoutes')
+const userRouter = require("./routes/userRoutes/userRoutes");
+const productRouter = require('./routes/productRoutes/productRoutes')
+const createError = require('http-errors');
+const categoryRouter = require("./routes/productRoutes/categoryRoutes");
 
 //middleware
 app.use(cors());
@@ -14,7 +17,23 @@ app.get("/", (req, res) => {
 
 
 //Main routes 
-app.use('/users',userRoutes)
+app.use('/api/users', userRouter);
+app.use('/api/products', productRouter);
+app.use('/api/products/categories', categoryRouter);
+
+
+//Client side errors
+app.use((req, res, next) => {
+  next(createError(404,"route not found"))
+})
+
+//server side errors -> all the errors come here
+app.use((err, req, res, next) => {
+  return res.status(err.status || 500).send({
+    success: false,
+    message: err.message
+  })
+})
 
 
 module.exports = app;
