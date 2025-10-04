@@ -5,9 +5,9 @@ const verifyAdmin = require('../../middlewares/admin');
 const orderRouter = express.Router();
 
 //create order
-orderRouter.post("/", createOrder);
+orderRouter.post("/",verifyToken,verifyAdmin, createOrder);
 
 //Get all orders 
-orderRouter.get("/", getAllOrders);
+orderRouter.get("/", verifyToken,verifyAdmin,getAllOrders);
 
 module.exports = orderRouter;
