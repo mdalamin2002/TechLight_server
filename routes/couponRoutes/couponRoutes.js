@@ -4,8 +4,8 @@ const {
   createCoupon,
 
 } = require("../../controllers/couponController/couponController");
-const verifyToken = require("../../middlewares/auth");
-const verifyAdmin = require("../../middlewares/admin");
+// const verifyToken = require("../../middlewares/auth");
+// const verifyAdmin = require("../../middlewares/admin");
 
 const couponRouter = express.Router();
 

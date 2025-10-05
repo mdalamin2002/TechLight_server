@@ -1,4 +1,5 @@
 const { client } = require("./../../config/mongoDB");
+// const { ObjectId } = require("mongodb");
 const db = client.db("techLight");
 const couponsCollections = db.collection("coupons");
 
@@ -9,7 +10,11 @@ const couponsCollections = db.collection("coupons");
     const couponData =  req.body
     console.log(couponData)
     const result = await couponsCollections.insertOne(couponData);
-     res.status(201).send(result);
+     res.status(201).send({
+      acknowledged: result.acknowledged,
+      insertedId: result.insertedId,
+      message: "Coupon created successfully"
+     });
   } catch (error) {
     next(error)
   }
