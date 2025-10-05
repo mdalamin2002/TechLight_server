@@ -6,6 +6,8 @@ const productRouter = require('./routes/productRoutes/productRoutes')
 const createError = require('http-errors');
 const categoryRouter = require("./routes/productRoutes/categoryRoutes");
 
+const couponRouter = require("./routes/couponRoutes/couponRoutes");
+
 //middleware
 app.use(cors());
 app.use(express.json());
@@ -20,6 +22,9 @@ app.get("/", (req, res) => {
 app.use('/api/users', userRouter);
 app.use('/api/products', productRouter);
 app.use('/api/products/categories', categoryRouter);
+
+//Admin routes
+app.use("/api/coupons", couponRouter);
 
 
 //Client side errors
