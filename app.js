@@ -7,6 +7,7 @@ const createError = require('http-errors');
 const categoryRouter = require("./routes/productRoutes/categoryRoutes");
 
 const couponRouter = require("./routes/couponRoutes/couponRoutes");
+const notificationsRouter = require("./routes/notificationsRoutes/notificationsRoutes");
 
 //middleware
 app.use(cors());
@@ -25,6 +26,9 @@ app.use('/api/products/categories', categoryRouter);
 
 //Admin routes
 app.use("/api/coupons", couponRouter);
+
+//  notifications routes
+app.use("/api/admin/notifications", notificationsRouter);
 
 
 //Client side errors
