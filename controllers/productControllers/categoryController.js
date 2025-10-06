@@ -31,4 +31,13 @@ const createSubCategory = async (req, res, next) => {
   }
 }
 
-module.exports = { createCategory,createSubCategory };
+const getAllCategory = async (req, res, next) => {
+ try {
+   const result = await categoryCollection.find().toArray();
+  res.status(200).send(result);
+ } catch (error) {
+   next(error);
+ }
+}
+
+module.exports = { createCategory,createSubCategory,getAllCategory };

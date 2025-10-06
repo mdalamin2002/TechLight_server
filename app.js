@@ -5,6 +5,8 @@ const userRouter = require("./routes/userRoutes/userRoutes");
 const productRouter = require('./routes/productRoutes/productRoutes')
 const createError = require('http-errors');
 const categoryRouter = require("./routes/productRoutes/categoryRoutes");
+const orderRouter = require("./routes/orderRoutes/orderRouters");
+const announcementRouter = require("./routes/announcementRoutes/announcementRoutes");
 
 //middleware
 app.use(cors());
@@ -19,7 +21,9 @@ app.get("/", (req, res) => {
 //Main routes 
 app.use('/api/users', userRouter);
 app.use('/api/products', productRouter);
-app.use('/api/products/categories', categoryRouter);
+app.use('/api/orders', orderRouter);
+app.use('/api/announcement', announcementRouter);
+app.use('/api/categories', categoryRouter);
 
 
 //Client side errors
