@@ -1,5 +1,5 @@
 const { client } = require("./../../config/mongoDB");
-// const { ObjectId } = require("mongodb");
+const { ObjectId } = require("mongodb");
 const db = client.db("techLight");
 const couponsCollections = db.collection("coupons");
 
@@ -30,6 +30,35 @@ const   getAllCoupons = async (req, res, next) => {
   }
 };
 
+// Update a coupon
+
+const updateCoupon = async (req, res, next) => {
+  try {
+    const {id} = req.params
+    const updateData = req.body;
+    const result = await couponsCollections.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updateData }
+    );
+    res.status(200).send(result);
+  } catch (error) {
+    next(error)
+  }
+
+}
+
+// Delete a coupon
+
+const deleteCoupon = async (req, res, next) => {
+  try {
+    const {id} = req.params
+    const result = await couponsCollections.deleteOne({ _id: new ObjectId(id) });
+    res.status(200).send(result);
+  } catch (error) {
+    next(error)
+  }
+}
+
 
 
 
@@ -37,5 +66,7 @@ const   getAllCoupons = async (req, res, next) => {
 module.exports = {
   getAllCoupons,
   createCoupon,
+  updateCoupon,
+  deleteCoupon
   
 };
