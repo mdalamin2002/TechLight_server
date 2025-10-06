@@ -23,7 +23,7 @@ app.use('/api/users', userRouter);
 app.use('/api/products', productRouter);
 app.use('/api/orders', orderRouter);
 app.use('/api/announcement', announcementRouter);
-app.use('/api/products/categories', categoryRouter);
+app.use('/api/categories', categoryRouter);
 
 
 //Client side errors

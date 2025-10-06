@@ -79,11 +79,21 @@ const deleteProduct = async (req, res, next) => {
   }
 };
 
-//Get Product Data category wise
+//Get Product Data category and subcategory wise
 const getProductsByCategory = async (req, res, next) => {
   const { category, subCategory } = req.params;
   try {
     const result = await productsCollection.find({ category, subCategory }).toArray();
+    res.status(200).send(result);
+  } catch (error) {
+    next(error);
+  }
+};
+//Get Product Data category wise
+const getProductsByOnlyCategory = async (req, res, next) => {
+  const { category } = req.params;
+  try {
+    const result = await productsCollection.find({ category:category }).toArray();
     res.status(200).send(result);
   } catch (error) {
     next(error);
@@ -100,5 +110,6 @@ module.exports = {
   deleteProduct,
   getSingleProduct,
     updateProduct,
-    productsCollection
+  productsCollection,
+    getProductsByOnlyCategory
 };
