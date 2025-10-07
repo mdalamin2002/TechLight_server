@@ -1,5 +1,4 @@
-// controllers/notificationsController/notificationsController.js
-const { client } = require("./../../config/mongoDB");
+const { client } = require("../../config/mongoDB");
 const { ObjectId } = require("mongodb");
 
 const db = client.db("techLight");
@@ -26,7 +25,7 @@ const sendNotification = async (req, res, next) => {
     res.status(201).json({
       success: true,
       message: "Notification sent successfully",
-      data: result.ops ? result.ops[0] : notificationData,
+      data: notificationData,
     });
   } catch (error) {
     next(error);

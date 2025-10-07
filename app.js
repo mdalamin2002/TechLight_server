@@ -34,12 +34,12 @@ app.use('/api/categories', categoryRouter);
 app.use("/api/coupons", couponRouter);
 
 //  notifications routes
-app.use("/api/admin/notifications", notificationsRouter);
+app.use("/api/notifications", notificationsRouter);
 
 
 
 // Routes announcements 
-app.use("/api/admin/announcements", announcementRoutes);
+app.use("/api/announcements", announcementRoutes);
 
 
 //Client side errors
