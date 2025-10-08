@@ -12,6 +12,7 @@ const couponRouter = require("./routes/couponRoutes/couponRoutes");
 const notificationsRouter = require("./routes/notificationsRoutes/notificationsRoutes");
 
 const announcementRoutes = require("./routes/announcementRoutes/announcementRoutes");
+const supportRoute = require("./routes/supportRoutes/supportRoutes");
 
 //middleware
 app.use(cors());
@@ -40,6 +41,9 @@ app.use("/api/notifications", notificationsRouter);
 
 // Routes announcements 
 app.use("/api/announcements", announcementRoutes);
+
+// Support Tickets 
+app.use("/api/support", supportRoute);
 
 
 //Client side errors
