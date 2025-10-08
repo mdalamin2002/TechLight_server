@@ -1,5 +1,5 @@
 const express = require('express');
-const { registerUser, loginUser, getAllUsers, updateUserRole } = require('../../controllers/userControllers/userControllers');
+const { registerUser, loginUser, getAllUsers, updateUserRole, trackLogin, checkLock } = require('../../controllers/userControllers/userControllers');
 const verifyToken = require('../../middlewares/auth');
 const verifyAdmin = require('../../middlewares/admin');
 const userRouter = express.Router();
@@ -8,10 +8,16 @@ const userRouter = express.Router();
 userRouter.post("/auth/register", registerUser);
 
 //Get all users 
-userRouter.get("/",verifyToken,verifyAdmin,getAllUsers)
+userRouter.get("/", verifyToken, verifyAdmin, getAllUsers);
+
+//Track Login
+userRouter.post("/auth/trackLogin", trackLogin);
+
+//Check lock
+userRouter.post("/auth/checkLock", checkLock);
 
 //Login User
-userRouter.get("/auth/:email", verifyToken, loginUser);
+userRouter.get("/:email", verifyToken, loginUser);
 
 //Update user role
 userRouter.patch("/role/:id",verifyToken,verifyAdmin,updateUserRole)
