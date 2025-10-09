@@ -12,6 +12,8 @@ const couponRouter = require("./routes/couponRoutes/couponRoutes");
 const notificationsRouter = require("./routes/notificationsRoutes/notificationsRoutes");
 
 const announcementRoutes = require("./routes/announcementRoutes/announcementRoutes");
+const supportRoute = require("./routes/supportRoutes/supportRoutes");
+const bannerRoute = require("./routes/bannerRoute/bannerRoute");
 const wishlistRouter = require("./routes/wishlistRoutes/wishlistRoutes");
 
 //middleware
@@ -42,6 +44,11 @@ app.use("/api/notifications", notificationsRouter);
 
 // Routes announcements
 app.use("/api/announcements", announcementRoutes);
+
+// Support Tickets 
+app.use("/api/support", supportRoute);
+// banners routes 
+app.use("/api/banners", bannerRoute);
 
 
 //Client side errors
