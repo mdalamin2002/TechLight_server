@@ -58,7 +58,7 @@ const updateTicket = async (req, res, next) => {
 };
 
 // ticket delete
-const deleteTicket = async (req, res) => {
+const deleteTicket = async (req, res, next) => {
   try {
     const { id } = req.params;
     const result = await supportCollections.deleteOne({ _id: new ObjectId(id) });

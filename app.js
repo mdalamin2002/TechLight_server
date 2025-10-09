@@ -13,6 +13,7 @@ const notificationsRouter = require("./routes/notificationsRoutes/notificationsR
 
 const announcementRoutes = require("./routes/announcementRoutes/announcementRoutes");
 const supportRoute = require("./routes/supportRoutes/supportRoutes");
+const bannerRoute = require("./routes/bannerRoute/bannerRoute");
 
 //middleware
 app.use(cors());
@@ -44,6 +45,8 @@ app.use("/api/announcements", announcementRoutes);
 
 // Support Tickets 
 app.use("/api/support", supportRoute);
+// banners routes 
+app.use("/api/banners", bannerRoute);
 
 
 //Client side errors
