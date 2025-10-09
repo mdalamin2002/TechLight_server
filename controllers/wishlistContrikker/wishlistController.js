@@ -1,3 +1,4 @@
+const { ObjectId } = require("mongodb");
 const { client } = require("./../../config/mongoDB");
 const db = client.db("techLight");
 const wishlistCollection = db.collection("wishlists");
@@ -24,7 +25,21 @@ const createWishlists = async (req, res, next) => {
     }
 }
 
+// delete wishlist by id
+const deleteWishlist = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await wishlistCollection.deleteOne({ _id: new ObjectId(id) });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).send({ message: "Wishlist item not found" });
+    }
+
+    res.send({ message: "Wishlist item deleted successfully" });
+  } catch (error) {
+    next(error);
+  }
+};
 
 
-
-module.exports = { getAllWishlists, createWishlists }
+module.exports = { getAllWishlists, createWishlists, deleteWishlist }
