@@ -36,6 +36,31 @@ const createCart = async (req, res, next) => {
     }
 };
 
+// Update quantity (increase/decrease)
+const updateCartQuantity = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { action } = req.body;
+
+        const cartItem = await cartCollection.findOne({ _id: new ObjectId(id) });
+        if (!cartItem) return res.status(404).send({ message: "Cart item not found" });
+
+        let newQuantity = cartItem.quantity;
+
+        if (action === "increase") newQuantity += 1;
+        else if (action === "decrease" && newQuantity > 1) newQuantity -= 1;
+
+        const result = await cartCollection.updateOne(
+            { _id: new ObjectId(id) },
+            { $set: { quantity: newQuantity } }
+        );
+
+        res.send(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
 
 
 module.exports = {
