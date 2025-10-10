@@ -12,6 +12,9 @@ const couponRouter = require("./routes/couponRoutes/couponRoutes");
 const notificationsRouter = require("./routes/notificationsRoutes/notificationsRoutes");
 
 const announcementRoutes = require("./routes/announcementRoutes/announcementRoutes");
+const supportRoute = require("./routes/supportRoutes/supportRoutes");
+const bannerRoute = require("./routes/bannerRoute/bannerRoute");
+const wishlistRouter = require("./routes/wishlistRoutes/wishlistRoutes");
 
 //middleware
 app.use(cors());
@@ -23,12 +26,13 @@ app.get("/", (req, res) => {
 });
 
 
-//Main routes 
+//Main routes
 app.use('/api/users', userRouter);
 app.use('/api/products', productRouter);
 app.use('/api/orders', orderRouter);
 app.use('/api/announcement', announcementRouter);
 app.use('/api/categories', categoryRouter);
+app.use('/api/wishlist', wishlistRouter)
 
 //Admin routes
 app.use("/api/coupons", couponRouter);
@@ -38,8 +42,13 @@ app.use("/api/notifications", notificationsRouter);
 
 
 
-// Routes announcements 
+// Routes announcements
 app.use("/api/announcements", announcementRoutes);
+
+// Support Tickets 
+app.use("/api/support", supportRoute);
+// banners routes 
+app.use("/api/banners", bannerRoute);
 
 
 //Client side errors
