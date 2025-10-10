@@ -5,13 +5,15 @@ const wishlistCollection = db.collection("wishlists");
 
 // get all wishlist
 const getAllWishlists = async (req, res, next) => {
-    try {
-        const result = await wishlistCollection.find().toArray()
-        res.send(result)
-    } catch (error) {
-        next(error)
-    }
-}
+  try {
+    const userEmail = req.query.userEmail;
+    if (!userEmail) return res.status(400).send({ message: "userEmail is required" });
+    const result = await wishlistCollection.find({ userEmail }).toArray();
+    res.send(result);
+  } catch (error) {
+    next(error);
+  }
+};
 
 // create a new wishlist
 const createWishlists = async (req, res, next) => {
