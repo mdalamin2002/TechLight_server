@@ -15,6 +15,28 @@ const getAllCart = async (req, res, next) => {
     }
 };
 
+// Add to cart
+const createCart = async (req, res, next) => {
+    try {
+        const cartItem = req.body;
+
+        const exists = await cartCollection.findOne({
+            productId: cartItem.productId,
+            userEmail: cartItem.userEmail,
+        });
+
+        if (exists) {
+            return res.status(400).send({ message: "Item already in cart" });
+        }
+
+        const result = await cartCollection.insertOne(cartItem);
+        res.send(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+
 
 module.exports = {
     getAllCart,
