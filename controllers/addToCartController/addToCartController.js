@@ -7,7 +7,12 @@ const cartCollection = db.collection("cart");
 const getAllCart = async (req, res, next) => {
     try {
         const { email } = req.query;
-        const query = email ? { userEmail: email } : {};
+
+        if (!email) {
+            return res.status(400).send({ message: "User email is required to fetch cart items." });
+        }
+
+        const query = { userEmail: email };
         const result = await cartCollection.find(query).toArray();
         res.send(result);
     } catch (error) {
