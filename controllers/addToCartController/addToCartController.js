@@ -61,7 +61,21 @@ const updateCartQuantity = async (req, res, next) => {
     }
 };
 
+// Delete item from cart
+const deleteCart = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const result = await cartCollection.deleteOne({ _id: new ObjectId(id) });
 
+        if (result.deletedCount === 0) {
+            return res.status(404).send({ message: "Cart item not found" });
+        }
+
+        res.send({ message: "Cart item deleted successfully" });
+    } catch (error) {
+        next(error);
+    }
+};
 
 module.exports = {
     getAllCart,
