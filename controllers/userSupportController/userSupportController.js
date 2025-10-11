@@ -1,4 +1,4 @@
-const { client } = require("../config/mongoDB"); // তোমার mongoDB config
+const { client } = require("../../config/mongoDB");
 const { ObjectId } = require("mongodb");
 
 const db = client.db("techLight");
@@ -28,19 +28,17 @@ const createTicket = async (req, res) => {
 
     res.status(201).json({ success: true, ticket });
   } catch (error) {
-    console.error("❌ Error creating ticket:", error);
-    res.status(500).json({ success: false, message: "Server error" });
+   next(error)
   }
 };
 
 // 📝 Get all tickets for a user (filtering can be added later)
-const getUserTickets = async (req, res) => {
+const getUserTickets = async (req, res, next) => {
   try {
     const tickets = await supportCollection.find({}).sort({ createdAt: -1 }).toArray();
     res.status(200).json(tickets);
   } catch (error) {
-    console.error("❌ Error fetching tickets:", error);
-    res.status(500).json({ success: false, message: "Server error" });
+    next(error);
   }
 };
 
