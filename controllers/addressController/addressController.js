@@ -73,11 +73,25 @@ const updateAddress = async (req, res) => {
   }
 };
 
+// Delete address
+const deleteAddress = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await addressCollection.deleteOne({ _id: new ObjectId(id) });
+    res
+      .status(200)
+      .json({ success: true, message: "Address deleted successfully", result });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 
 
 module.exports = {
   addAddress,
   getAddresses,
   updateAddress,
+  deleteAddress,
 
 };
