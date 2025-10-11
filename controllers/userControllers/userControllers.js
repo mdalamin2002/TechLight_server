@@ -58,7 +58,7 @@ const checkLock = async (req, res) => {
   const user = await usersCollections.findOne({ email });
   if (!user) return res.status(404).send({ allowed: false, message: "User not found" });
 
-  if (user.lockUntil && new Date(user.lockUntil).toLocaleTimeString() > new Date().toLocaleTimeString()) {
+  if (user.lockUntil && new Date(user.lockUntil) > new Date()) {
     return res.send({ 
       allowed: false, 
       message: `Your account is temporarily locked due to multiple failed login attempts. Please try again after ${user.lockUntil}.` 
