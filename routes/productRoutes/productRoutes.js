@@ -9,7 +9,7 @@ const productRouter = express.Router();
 productRouter.post("/", verifyToken,verifyAdmin,createProduct);
 
 //Get All Product
-productRouter.get("/", getAllProducts);
+productRouter.get("/",verifyToken, getAllProducts);
 
 //Get single product
 productRouter.get("/details/:id", getSingleProduct);
