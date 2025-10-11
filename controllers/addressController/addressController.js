@@ -86,12 +86,24 @@ const deleteAddress = async (req, res) => {
   }
 };
 
-
+// Get default address (for checkout)
+const getDefaultAddress = async (req, res) => {
+  try {
+    const email = req.query.email;
+    const address = await addressCollection.findOne({
+      userEmail: email,
+      default: true,
+    });
+    res.status(200).json(address || {});
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 
 module.exports = {
   addAddress,
   getAddresses,
   updateAddress,
   deleteAddress,
-
+  getDefaultAddress,
 };
