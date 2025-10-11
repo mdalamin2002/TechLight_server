@@ -41,10 +41,43 @@ const getAddresses = async (req, res) => {
   }
 };
 
+// Update address
+const updateAddress = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updated = req.body;
+
+    // Handle new default
+    if (updated.default) {
+      const existing = await addressCollection.findOne({ _id: new ObjectId(id) });
+      if (existing && existing.userEmail) {
+        await addressCollection.updateMany(
+          { userEmail: existing.userEmail },
+          { $set: { default: false } }
+        );
+      }
+    }
+
+    const result = await addressCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updated }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Address updated successfully",
+      result,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 
 
 module.exports = {
   addAddress,
   getAddresses,
+  updateAddress,
 
 };
