@@ -1,5 +1,5 @@
 const express = require('express');
-const { registerUser, loginUser, getAllUsers, updateUserRole, trackLogin, checkLock } = require('../../controllers/userControllers/userControllers');
+const { registerUser, loginUser, getAllUsers, updateUserRole, updateUserProfile , trackLogin, checkLock } = require('../../controllers/userControllers/userControllers');
 const verifyToken = require('../../middlewares/auth');
 const verifyAdmin = require('../../middlewares/admin');
 const userRouter = express.Router();
@@ -17,11 +17,12 @@ userRouter.post("/auth/trackLogin", trackLogin);
 userRouter.post("/auth/checkLock", checkLock);
 
 //Login User
-userRouter.get("/:email", verifyToken, loginUser);
+userRouter.get("/auth/:email", verifyToken, loginUser);
 
 //Update user role
 userRouter.patch("/role/:id",verifyToken,verifyAdmin,updateUserRole)
-
+// Update User Profile
+userRouter.put("/auth/:email", verifyToken, updateUserProfile);
 
 
 module.exports = userRouter ;

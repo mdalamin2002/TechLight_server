@@ -116,4 +116,35 @@ const updateUserRole = async (req, res, next) => {
   }
 };
 
-module.exports = { registerUser, loginUser, usersCollections, getAllUsers, updateUserRole, trackLogin, checkLock };
+// Update User Profile
+const updateUserProfile = async (req, res, next) => {
+  try {
+    const email = req.params.email;
+    const decodedEmail = req.decoded;
+    
+    if (email !== decodedEmail) {
+      return res.status(401).send({ message: "Unauthorized access" });
+    }
+
+    const updateData = req.body;
+
+    const result = await usersCollections.findOneAndUpdate(
+      { email },
+      { $set: updateData },
+      { returnDocument: "after" }
+    );
+
+    if (!result.value) {
+      return res.status(404).send({ message: "User not found" });
+    }
+
+    res.status(200).send(result.value);
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+
+
+module.exports = { registerUser, loginUser, usersCollections, getAllUsers, updateUserRole, updateUserProfile, trackLogin, checkLock };
