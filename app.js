@@ -15,6 +15,9 @@ const announcementRoutes = require("./routes/announcementRoutes/announcementRout
 const supportRoute = require("./routes/supportRoutes/supportRoutes");
 const bannerRoute = require("./routes/bannerRoute/bannerRoute");
 const wishlistRouter = require("./routes/wishlistRoutes/wishlistRoutes");
+const userSupportRouter = require("./routes/userSupportRoutes/userSupportRoutes");
+
+
 
 //middleware
 app.use(cors());
@@ -45,10 +48,13 @@ app.use("/api/notifications", notificationsRouter);
 // Routes announcements
 app.use("/api/announcements", announcementRoutes);
 
-// Support Tickets 
+// Support admin Tickets 
 app.use("/api/support", supportRoute);
 // banners routes 
 app.use("/api/banners", bannerRoute);
+
+// user     support routes
+app.use("/api/support/user", userSupportRouter );
 
 
 //Client side errors
