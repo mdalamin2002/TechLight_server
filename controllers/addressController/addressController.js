@@ -27,9 +27,24 @@ const addAddress = async (req, res) => {
   }
 };
 
+// Get all addresses for a user
+const getAddresses = async (req, res) => {
+  try {
+    const email = req.query.email;
+    const addresses = await addressCollection
+      .find({ userEmail: email })
+      .sort({ _id: -1 })
+      .toArray();
+    res.status(200).json(addresses);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 
 
 module.exports = {
   addAddress,
+  getAddresses,
 
 };
