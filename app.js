@@ -19,6 +19,7 @@ const userSupportRouter = require("./routes/userSupportRoutes/userSupportRoutes"
 
 
 const cartRouter = require("./routes/AddToCartRoutes/AddToCartRoutes");
+const returnRouter = require("./routes/returnRoutes/returnRoutes");
 
 //middleware
 app.use(cors());
@@ -44,6 +45,8 @@ app.use("/api/coupons", couponRouter);
 
 //  notifications routes
 app.use("/api/notifications", notificationsRouter);
+// return routes
+app.use("/api/returns", returnRouter);
 
 
 
