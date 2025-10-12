@@ -19,6 +19,7 @@ const userSupportRouter = require("./routes/userSupportRoutes/userSupportRoutes"
 
 
 const cartRouter = require("./routes/AddToCartRoutes/AddToCartRoutes");
+const addressRoutes = require("./routes/addressRoutes/addressRoutes");
 
 //middleware
 app.use(cors());
@@ -38,6 +39,7 @@ app.use('/api/announcement', announcementRouter);
 app.use('/api/categories', categoryRouter);
 app.use('/api/wishlist', wishlistRouter)
 app.use('/api/cart', cartRouter)
+app.use("/api/addresses", addressRoutes);
 
 //Admin routes
 app.use("/api/coupons", couponRouter);
