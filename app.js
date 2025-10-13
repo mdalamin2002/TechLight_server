@@ -60,6 +60,7 @@ app.use("/api/banners", bannerRoute);
 
 // user     support routes
 app.use("/api/support/user", userSupportRouter );
+app.use("/api/support/user/all", userSupportRouter );
 
 
 //Client side errors
