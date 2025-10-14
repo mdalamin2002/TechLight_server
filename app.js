@@ -21,7 +21,7 @@ const userSupportRouter = require("./routes/userSupportRoutes/userSupportRoutes"
 const ordersProductRouter = require("./routes/ordersProductRoutes/ordersProductRoutes");
 const usersReviewsRouter = require("./routes/usersReviewsRouter/usersReviewsRouter");
 
-const cartRouter = require("./routes/AddToCartRoutes/AddToCartRoutes");
+const cartRouter = require("./routes/addToCartRoutes/addToCartRoutes");
 const returnRouter = require("./routes/returnRoutes/returnRoutes");
 const addressRoutes = require("./routes/addressRoutes/addressRoutes");
 
