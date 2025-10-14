@@ -18,7 +18,7 @@ const wishlistRouter = require("./routes/wishlistRoutes/wishlistRoutes");
 const userSupportRouter = require("./routes/userSupportRoutes/userSupportRoutes");
 
 
-const cartRouter = require("./routes/AddToCartRoutes/AddToCartRoutes");
+const cartRouter = require("./routes/addToCartRoutes/addToCartRoutes");
 const returnRouter = require("./routes/returnRoutes/returnRoutes");
 
 //middleware
