@@ -1,5 +1,5 @@
 const { ObjectId } = require("mongodb");
-const { client } = require("./../../config/mongoDB");
+const { client } = require("../../config/mongoDB");
 const db = client.db("techLight");
 const cartCollection = db.collection("cart");
 
