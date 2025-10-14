@@ -17,9 +17,12 @@ const bannerRoute = require("./routes/bannerRoute/bannerRoute");
 const wishlistRouter = require("./routes/wishlistRoutes/wishlistRoutes");
 const userSupportRouter = require("./routes/userSupportRoutes/userSupportRoutes");
 
+const ordersProductRouter = require("./routes/ordersProductRoutes/ordersProductRoutes");
+const usersReviewsRouter = require("./routes/usersReviewsRouter/usersReviewsRouter");
 
 const cartRouter = require("./routes/addToCartRoutes/addToCartRoutes");
 const returnRouter = require("./routes/returnRoutes/returnRoutes");
+const addressRoutes = require("./routes/addressRoutes/addressRoutes");
 
 //middleware
 app.use(cors());
@@ -39,6 +42,11 @@ app.use('/api/announcement', announcementRouter);
 app.use('/api/categories', categoryRouter);
 app.use('/api/wishlist', wishlistRouter)
 app.use('/api/cart', cartRouter)
+app.use("/api/addresses", addressRoutes);
+
+//Moderatr routes
+app.use('/api/moderator/orders-products', ordersProductRouter);
+app.use('/api/moderator/users-reviews', usersReviewsRouter);
 
 //Admin routes
 app.use("/api/coupons", couponRouter);

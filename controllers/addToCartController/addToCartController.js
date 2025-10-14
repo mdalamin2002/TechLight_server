@@ -1,5 +1,5 @@
 const { ObjectId } = require("mongodb");
-const { client } = require("./../../config/mongoDB");
+const { client } = require("../../config/mongoDB");
 const db = client.db("techLight");
 const cartCollection = db.collection("cart");
 
@@ -24,6 +24,7 @@ const getAllCart = async (req, res, next) => {
 const createCart = async (req, res, next) => {
     try {
         const cartItem = req.body;
+        cartItem.productId = String(cartItem.productId);
 
         const exists = await cartCollection.findOne({
             productId: cartItem.productId,
