@@ -12,6 +12,7 @@ const couponRouter = require("./routes/couponRoutes/couponRoutes");
 const notificationsRouter = require("./routes/notificationsRoutes/notificationsRoutes");
 
 const announcementRoutes = require("./routes/announcementRoutes/announcementRoutes");
+const paymentRouter = require("./routes/paymentRoutes/paymentRoutes");
 
 //middleware
 app.use(cors());
@@ -40,6 +41,10 @@ app.use("/api/notifications", notificationsRouter);
 
 // Routes announcements 
 app.use("/api/announcements", announcementRoutes);
+
+//payment routes
+app.use('/api/payments', paymentRouter)
+
 
 
 //Client side errors
