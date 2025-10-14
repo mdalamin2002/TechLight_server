@@ -21,6 +21,7 @@ const ordersProductRouter = require("./routes/ordersProductRoutes/ordersProductR
 const usersReviewsRouter = require("./routes/usersReviewsRouter/usersReviewsRouter");
 
 const cartRouter = require("./routes/AddToCartRoutes/AddToCartRoutes");
+const returnRouter = require("./routes/returnRoutes/returnRoutes");
 const addressRoutes = require("./routes/addressRoutes/addressRoutes");
 
 //middleware
@@ -52,6 +53,8 @@ app.use("/api/coupons", couponRouter);
 
 //  notifications routes
 app.use("/api/notifications", notificationsRouter);
+// return routes
+app.use("/api/returns", returnRouter);
 
 
 
@@ -65,6 +68,7 @@ app.use("/api/banners", bannerRoute);
 
 // user     support routes
 app.use("/api/support/user", userSupportRouter );
+app.use("/api/support/user/all", userSupportRouter );
 
 
 //Client side errors
