@@ -12,6 +12,7 @@ const couponRouter = require("./routes/couponRoutes/couponRoutes");
 const notificationsRouter = require("./routes/notificationsRoutes/notificationsRoutes");
 
 const announcementRoutes = require("./routes/announcementRoutes/announcementRoutes");
+const paymentRouter = require("./routes/paymentRoutes/paymentRoutes");
 const supportRoute = require("./routes/supportRoutes/supportRoutes");
 const bannerRoute = require("./routes/bannerRoute/bannerRoute");
 const wishlistRouter = require("./routes/wishlistRoutes/wishlistRoutes");
@@ -60,6 +61,9 @@ app.use("/api/returns", returnRouter);
 
 // Routes announcements
 app.use("/api/announcements", announcementRoutes);
+
+//payment routes
+app.use('/api/payments', paymentRouter)
 
 // Support admin Tickets 
 app.use("/api/support", supportRoute);
