@@ -1,5 +1,5 @@
 const express = require('express');
-const { getAllWishlists, createWishlists, deleteWishlist } = require('../../controllers/wishlistContrikker/wishlistController');
+const { getAllWishlists, createWishlists, deleteWishlist } = require('../../controllers/wishlistController/wishlistController');
 const wishlistRouter = express.Router();
 
 // get all wishlist
