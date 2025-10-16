@@ -6,22 +6,30 @@ const productRouter = require('./routes/productRoutes/productRoutes')
 const createError = require('http-errors');
 const categoryRouter = require("./routes/productRoutes/categoryRoutes");
 const orderRouter = require("./routes/orderRoutes/orderRouters");
-const announcementRouter = require("./routes/announcementRoutes/announcementRoutes");
-
+const announcementsRouter = require("./routes/announcementRoutes/announcementRoutes");
 const couponRouter = require("./routes/couponRoutes/couponRoutes");
 const notificationsRouter = require("./routes/notificationsRoutes/notificationsRoutes");
-
-const announcementRoutes = require("./routes/announcementRoutes/announcementRoutes");
+const paymentRouter = require("./routes/paymentRoutes/paymentRoutes");
 const supportRoute = require("./routes/supportRoutes/supportRoutes");
 const supportConversationRoute = require("./routes/supportConversationRoutes/supportConversationRoutes");
 const supportMessageRoute = require("./routes/supportMessageRoutes/supportMessageRoutes");
 const bannerRoute = require("./routes/bannerRoute/bannerRoute");
 const wishlistRouter = require("./routes/wishlistRoutes/wishlistRoutes");
-const cartRouter = require("./routes/AddToCartRoutes/AddToCartRoutes");
+const userSupportRouter = require("./routes/userSupportRoutes/userSupportRoutes");
+const ordersProductRouter = require("./routes/ordersProductRoutes/ordersProductRoutes");
+const usersReviewsRouter = require("./routes/usersReviewsRouter/usersReviewsRouter");
+const cartRouter = require("./routes/addToCartRoutes/addToCartRoutes");
+const returnRouter = require("./routes/returnRoutes/returnRoutes");
+const addressRoutes = require("./routes/addressRoutes/addressRoutes");
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const { errorHandler, notFoundHandler } = require('./middlewares/errorHandler');
 
 //middleware
 app.use(cors());
+app.use(helmet());
 app.use(express.json());
+app.use(rateLimit({ windowMs: 60 * 1000, max: 100 }));
 
 //test route
 app.get("/", (req, res) => {
@@ -33,23 +41,31 @@ app.get("/", (req, res) => {
 app.use('/api/users', userRouter);
 app.use('/api/products', productRouter);
 app.use('/api/orders', orderRouter);
-app.use('/api/announcement', announcementRouter);
+// Announcements
+app.use('/api/announcements', announcementsRouter);
 app.use('/api/categories', categoryRouter);
 app.use('/api/wishlist', wishlistRouter)
 app.use('/api/cart', cartRouter)
+app.use("/api/addresses", addressRoutes);
+
+//Moderatr routes
+app.use('/api/moderator/orders-products', ordersProductRouter);
+app.use('/api/moderator/users-reviews', usersReviewsRouter);
 
 //Admin routes
 app.use("/api/coupons", couponRouter);
 
 //  notifications routes
 app.use("/api/notifications", notificationsRouter);
+// return routes
+app.use("/api/returns", returnRouter);
 
 
 
-// Routes announcements
-app.use("/api/announcements", announcementRoutes);
+//payment routes
+app.use('/api/payments', paymentRouter)
 
-// Support Tickets 
+// Support admin Tickets 
 app.use("/api/support", supportRoute);
 // Support Conversations (Chat System)
 app.use("/api/support", supportConversationRoute);
@@ -58,20 +74,13 @@ app.use("/api/support", supportMessageRoute);
 // banners routes 
 app.use("/api/banners", bannerRoute);
 
-
-//Client side errors
-app.use((req, res, next) => {
-  next(createError(404,"route not found"))
-})
+// user support routes
+app.use("/api/support/user", userSupportRouter );
 
 
-//server side errors -> all the errors come here
-app.use((err, req, res, next) => {
-  return res.status(err.status || 500).send({
-    success: false,
-    message: err.message
-  })
-})
+// 404 and error handlers
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 
 module.exports = app;

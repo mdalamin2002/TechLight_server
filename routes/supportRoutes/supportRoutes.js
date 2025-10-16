@@ -7,6 +7,7 @@ const {
   getTicketById
 } = require("../../controllers/supportController/supportController"); 
 
+// admin  support
 
 const supportRouter = express.Router();
 
@@ -20,7 +21,7 @@ supportRouter.get("/",  getAllTickets);
 supportRouter.get("/:id",  getTicketById);
 
 // ticket update 
-supportRouter.put("/:id",  updateTicket);
+supportRouter.patch("/:id",  updateTicket);
 
 // ticket delete 
 supportRouter.delete("/:id", deleteTicket);

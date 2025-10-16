@@ -1,11 +1,12 @@
-const { client } = require("../config/mongoDB"); // তোমার mongoDB config
+
 const { ObjectId } = require("mongodb");
+const { client } = require("../../config/mongoDB");
 
 const db = client.db("techLight");
 const supportCollection = db.collection("support");
 
-// 📝 Create a new ticket
-const createTicket = async (req, res) => {
+//  Create a new ticket
+const createTicket = async (req, res, next) => {
   try {
     const { subject, category, description, contact, priority, attachment } = req.body;
 
@@ -28,23 +29,54 @@ const createTicket = async (req, res) => {
 
     res.status(201).json({ success: true, ticket });
   } catch (error) {
-    console.error("❌ Error creating ticket:", error);
-    res.status(500).json({ success: false, message: "Server error" });
+   next(error)
   }
 };
 
-// 📝 Get all tickets for a user (filtering can be added later)
-const getUserTickets = async (req, res) => {
+// all tikcket
+
+const UserAllTickets  = async(req, res, next) => {
   try {
     const tickets = await supportCollection.find({}).sort({ createdAt: -1 }).toArray();
     res.status(200).json(tickets);
   } catch (error) {
-    console.error("❌ Error fetching tickets:", error);
-    res.status(500).json({ success: false, message: "Server error" });
+    next(error);
+  }
+}
+
+// update ticket 
+
+const updateTicket = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+    const result = await supportCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updateData }
+    );
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ message: "Ticket not found" });
+    }
+    res.status(200).json({ message: "Ticket updated" });
+  } catch (error) {
+    next(error);
+  }
+
+}
+
+//  Get all tickets for a user (filtering can be added later)
+const getUserTickets = async (req, res, next) => {
+  try {
+    const tickets = await supportCollection.find({}).sort({ createdAt: -1 }).toArray();
+    res.status(200).json(tickets);
+  } catch (error) {
+    next(error);
   }
 };
 
 module.exports = {
   createTicket,
   getUserTickets,
+  UserAllTickets,
+  updateTicket
 };

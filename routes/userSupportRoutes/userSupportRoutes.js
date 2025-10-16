@@ -1,11 +1,16 @@
 const express = require("express");
-const router = express.Router();
-const { createTicket, getUserTickets } = require("../../controllers/userSupportController/userSupportController");
+const userSupportRouter = express.Router();
+const { createTicket, getUserTickets, UserAllTickets, updateTicket } = require("../../controllers/userSupportController/userSupportController");
 
 // Route: GET /support/user -> get all tickets
-router.get("/user", getUserTickets);
+userSupportRouter.get("/", getUserTickets);
 
 // Route: POST /support/user -> create a ticket
-router.post("/user", createTicket);
+userSupportRouter.post("/", createTicket);
+// all tickets
+userSupportRouter.get("/", UserAllTickets )
 
-module.exports = router;
+// update ticket
+userSupportRouter.patch("/:id", updateTicket);
+
+module.exports = userSupportRouter;

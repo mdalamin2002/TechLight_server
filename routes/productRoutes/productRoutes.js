@@ -8,8 +8,8 @@ const productRouter = express.Router();
 //Create Product
 productRouter.post("/", verifyToken,verifyAdmin,createProduct);
 
-//Get All Product
-productRouter.get("/",verifyToken, getAllProducts);
+//Get All Product (public list)
+productRouter.get("/", getAllProducts);
 
 //Get single product
 productRouter.get("/details/:id", getSingleProduct);
@@ -17,8 +17,10 @@ productRouter.get("/details/:id", getSingleProduct);
 //Update product 
 productRouter.put("/update/:id",verifyToken,verifyAdmin, updateProduct);
 
-//delete Product
+// Soft delete Product (keep legacy path for now)
 productRouter.patch("/delete/:id",verifyToken,verifyAdmin,deleteProduct)
+// Preferred RESTful delete
+productRouter.delete("/:id", verifyToken, verifyAdmin, deleteProduct)
 
 //Get Product data category and subcategory wise
 productRouter.get("/:category/:subCategory", getProductsByCategory);

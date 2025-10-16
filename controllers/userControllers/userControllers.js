@@ -4,6 +4,11 @@ const checkUserStatus = require("../../utils/check_user_status");
 const { client } = require("./../../config/mongoDB");
 const db = client.db("techLight");
 const usersCollections = db.collection("users");
+// Check if any admin user exists
+const anyAdminExists = async () => {
+  const count = await usersCollections.countDocuments({ role: "admin" });
+  return count > 0;
+};
 
 //Register User
 const registerUser = async (req, res, next) => {
@@ -119,14 +124,17 @@ const updateUserRole = async (req, res, next) => {
   try {
     const userId = req.params.id;
     const { newRole } = req.body;
-    //validation
-    if (!newRole) return res.status(400).send({ success: false, message: "Role is required" });
+    // validation
+    const allowedRoles = ["admin", "moderator", "user"];
+    if (!newRole || !allowedRoles.includes(String(newRole).toLowerCase())) {
+      return res.status(400).send({ success: false, message: "Invalid role" });
+    }
     const query = { _id: new ObjectId(userId) };
     const updateRole = {
-      $set: { role: newRole },
+      $set: { role: String(newRole).toLowerCase(), updated_at: new Date() },
     };
     const result = await usersCollections.updateOne(query, updateRole);
-    res.status(200).send(result);
+    res.status(200).send({ success: true, modifiedCount: result.modifiedCount });
   } catch (error) {
     next(error);
   }
