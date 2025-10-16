@@ -7,11 +7,52 @@ const { initSocket } = require("./config/socketIo");
 async function startServer() {
   const server = createServer(app);
   const io = initSocket(server);
+  
+  // Socket.IO connection handling
   io.on("connection", (socket) => {
-    console.log("User connected:", socket.id);
+    console.log(" User connected:", socket.id);
 
+    // Join support team room (for admins/moderators)
+    socket.on("join_support_team", ({ userId, role }) => {
+      if (role === "admin" || role === "moderator") {
+        socket.join("support_team");
+        console.log(` ${role} ${userId} joined support team`);
+      }
+    });
+
+    // Join a specific support conversation
+    socket.on("join_support_conversation", ({ conversationId }) => {
+      socket.join(conversationId);
+      console.log(` User joined conversation: ${conversationId}`);
+    });
+
+    // Leave a support conversation
+    socket.on("leave_support_conversation", ({ conversationId }) => {
+      socket.leave(conversationId);
+      console.log(`User left conversation: ${conversationId}`);
+    });
+
+    // User typing indicator
+    socket.on("support_user_typing", ({ conversationId, isTyping, userName }) => {
+      socket.to(conversationId).emit("support_typing", {
+        conversationId,
+        isTyping,
+        userName,
+      });
+    });
+
+    // Support agent typing indicator
+    socket.on("support_agent_typing", ({ conversationId, isTyping, agentName }) => {
+      socket.to(conversationId).emit("support_typing", {
+        conversationId,
+        isTyping,
+        agentName,
+      });
+    });
+
+    // Handle disconnect
     socket.on("disconnect", () => {
-      console.log("User disconnected");
+      console.log(" User disconnected:", socket.id);
     });
   });
 
