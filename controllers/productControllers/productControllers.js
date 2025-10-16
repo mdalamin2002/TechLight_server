@@ -119,7 +119,7 @@ const getProductsByOnlyCategory = async (req, res, next) => {
   const { category } = req.params;
   try {
     const result = await productsCollection.find({ category:category, status: { $ne: 'inactive' } }).toArray();
-    res.status(200).send(result);
+    res.status(200).send({ data: result });
   } catch (error) {
     next(error);
   }
