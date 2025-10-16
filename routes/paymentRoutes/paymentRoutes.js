@@ -5,12 +5,10 @@ const paymentRouter = express.Router();
 
 // POST /api/payments/order
 
-paymentRouter.post('/order', createPayment);
-
-paymentRouter.get('/order', paymentSuccess);
-paymentRouter.get('/order', paymentFail);
-paymentRouter.get('/order', paymentCancel);
-
+paymentRouter.post("/order", createPayment);
+paymentRouter.post("/success/:tranId", paymentSuccess);
+paymentRouter.post("/fail/:tranId", paymentFail);
+paymentRouter.post("/cancel/:tranId", paymentCancel);
 
 
 module.exports = paymentRouter;
