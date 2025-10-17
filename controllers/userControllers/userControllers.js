@@ -93,6 +93,22 @@ const loginUser = async (req, res, next) => {
   }
 };
 
+//Login User
+const userRole = async (req, res, next) => {
+  try {
+    const email = req.params.email;
+    const user = await usersCollections.findOne({ email });
+
+    const statusCheck = checkUserStatus(user);
+    if (!statusCheck.allowed) {
+      return res.status(403).send({ success: false, message: statusCheck.message });
+    }
+    res.status(200).send(user);
+  } catch (error) {
+    next(error);
+  }
+};
+
 //Get all users
 const getAllUsers = async (req, res, next) => {
   try {
@@ -124,4 +140,4 @@ const updateUserRole = async (req, res, next) => {
   }
 };
 
-module.exports = { registerUser, loginUser, usersCollections, getAllUsers, updateUserRole, trackLogin, checkLock };
+module.exports = { registerUser, loginUser, usersCollections, getAllUsers, updateUserRole, trackLogin, checkLock,userRole };
