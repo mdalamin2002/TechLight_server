@@ -8,7 +8,6 @@ const couponsCollections = db.collection("coupons");
  const createCoupon = async (req, res, next) => {
   try {
     const couponData =  req.body
-    console.log(couponData)
     const result = await couponsCollections.insertOne(couponData);
      res.status(201).send({
       acknowledged: result.acknowledged,

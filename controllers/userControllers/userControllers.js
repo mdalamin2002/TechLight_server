@@ -98,6 +98,22 @@ const loginUser = async (req, res, next) => {
   }
 };
 
+//Login User
+const userRole = async (req, res, next) => {
+  try {
+    const email = req.params.email;
+    const user = await usersCollections.findOne({ email });
+
+    const statusCheck = checkUserStatus(user);
+    if (!statusCheck.allowed) {
+      return res.status(403).send({ success: false, message: statusCheck.message });
+    }
+    res.status(200).send(user);
+  } catch (error) {
+    next(error);
+  }
+};
+
 //Get all users
 const getAllUsers = async (req, res, next) => {
   try {
@@ -129,6 +145,7 @@ const updateUserRole = async (req, res, next) => {
   }
 };
 
+<<<<<<< HEAD
 module.exports = { registerUser, loginUser, usersCollections, getAllUsers, updateUserRole, trackLogin, checkLock };
 
 // Update user profile (name, phone, avatar)
@@ -173,3 +190,6 @@ const updateUserProfile = async (req, res, next) => {
 };
 
 module.exports.updateUserProfile = updateUserProfile;
+=======
+module.exports = { registerUser, loginUser, usersCollections, getAllUsers, updateUserRole, trackLogin, checkLock,userRole };
+>>>>>>> 1508738e1e1a1827ce8408172600cf9ea5af8567

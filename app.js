@@ -11,6 +11,8 @@ const couponRouter = require("./routes/couponRoutes/couponRoutes");
 const notificationsRouter = require("./routes/notificationsRoutes/notificationsRoutes");
 const paymentRouter = require("./routes/paymentRoutes/paymentRoutes");
 const supportRoute = require("./routes/supportRoutes/supportRoutes");
+const supportConversationRoute = require("./routes/supportConversationRoutes/supportConversationRoutes");
+const supportMessageRoute = require("./routes/supportMessageRoutes/supportMessageRoutes");
 const bannerRoute = require("./routes/bannerRoute/bannerRoute");
 const wishlistRouter = require("./routes/wishlistRoutes/wishlistRoutes");
 const userSupportRouter = require("./routes/userSupportRoutes/userSupportRoutes");
@@ -66,6 +68,10 @@ app.use('/api/payments', paymentRouter)
 
 // Support admin Tickets 
 app.use("/api/support", supportRoute);
+// Support Conversations (Chat System)
+app.use("/api/support", supportConversationRoute);
+// Support Messages (Chat System)
+app.use("/api/support", supportMessageRoute);
 // banners routes 
 app.use("/api/banners", bannerRoute);
 
