@@ -145,9 +145,6 @@ const updateUserRole = async (req, res, next) => {
   }
 };
 
-<<<<<<< HEAD
-module.exports = { registerUser, loginUser, usersCollections, getAllUsers, updateUserRole, trackLogin, checkLock };
-
 // Update user profile (name, phone, avatar)
 const updateUserProfile = async (req, res, next) => {
   try {
@@ -189,7 +186,14 @@ const updateUserProfile = async (req, res, next) => {
   }
 };
 
-module.exports.updateUserProfile = updateUserProfile;
-=======
-module.exports = { registerUser, loginUser, usersCollections, getAllUsers, updateUserRole, trackLogin, checkLock,userRole };
->>>>>>> 1508738e1e1a1827ce8408172600cf9ea5af8567
+module.exports = { 
+  registerUser, 
+  loginUser, 
+  usersCollections, 
+  getAllUsers, 
+  updateUserRole, 
+  trackLogin, 
+  checkLock,
+  userRole,
+  updateUserProfile
+};
