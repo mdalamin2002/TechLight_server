@@ -54,15 +54,23 @@ const sendMessage = async (req, res) => {
     const result = await messagesCollection.insertOne(newMessage);
     const messageId = result.insertedId;
 
-    // Update conversation's lastMessageAt
+    // Auto-assign moderator and change status to 'in-progress' when moderator sends first message
+    let updateData = {
+      lastMessageAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    if ((senderRole === "moderator" || senderRole === "admin") && conversation.status === "open") {
+      updateData.status = "in-progress";
+      updateData.assignedTo = senderId;
+      updateData.assignedToName = senderName;
+      updateData.assignedToRole = senderRole;
+    }
+
+    // Update conversation's lastMessageAt and potentially status/assignment
     await conversationsCollection.updateOne(
       { _id: new ObjectId(conversationId) },
-      {
-        $set: {
-          lastMessageAt: new Date(),
-          updatedAt: new Date(),
-        },
-      }
+      { $set: updateData }
     );
 
     // Emit socket event for real-time messaging
@@ -72,6 +80,24 @@ const sendMessage = async (req, res) => {
       
       // Emit to conversation room
       io.to(conversationId).emit("new_support_message", messageWithId);
+      
+      // If status changed to in-progress, emit status update
+      if (updateData.status === "in-progress") {
+        io.to(conversationId).emit("conversation_status_updated", {
+          conversationId,
+          status: "in-progress",
+          assignedTo: senderId,
+          assignedToName: senderName,
+          assignedToRole: senderRole,
+        });
+        io.to("support_team").emit("conversation_status_updated", {
+          conversationId,
+          status: "in-progress",
+          assignedTo: senderId,
+          assignedToName: senderName,
+          assignedToRole: senderRole,
+        });
+      }
       
       // If user sent message, notify support team
       if (senderRole === "user") {
@@ -108,6 +134,22 @@ const getMessagesByConversation = async (req, res) => {
   try {
     const { conversationId } = req.params;
     const { page = 1, limit = 50 } = req.query;
+
+    // Check if conversation exists
+    const conversation = await conversationsCollection.findOne({
+      _id: new ObjectId(conversationId),
+    });
+
+    if (!conversation) {
+      return res.status(404).json({
+        success: false,
+        message: "Conversation not found",
+      });
+    }
+
+    // Note: Access control should be handled by frontend filtering
+    // Backend will return messages for any valid conversation
+    // Frontend ensures moderators only request their assigned conversations
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 

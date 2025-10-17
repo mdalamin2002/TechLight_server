@@ -11,7 +11,6 @@ const createConversation = async (req, res) => {
   try {
     const data = req.body;
     const { userId, userName, userEmail, userPhone, subject, category, initialMessage,senderRole } = req.body;
-console.log(data);
     // Create conversation document
     const conversation = {
       userId: userId || "guest",
@@ -188,6 +187,26 @@ const updateConversationStatus = async (req, res) => {
       });
     }
 
+    // Check if user is trying to close a conversation
+    if (status === "closed") {
+      // Only allow admin to close conversations
+      const userRole = req.body.userRole || req.user?.role;
+      
+      if (!userRole) {
+        return res.status(400).json({
+          success: false,
+          message: "User role is required to update conversation status",
+        });
+      }
+      
+      if (userRole !== "admin") {
+        return res.status(403).json({
+          success: false,
+          message: "Only admins can close conversations. Moderators can only mark as resolved.",
+        });
+      }
+    }
+
     const updateData = {
       updatedAt: new Date(),
     };
@@ -275,6 +294,87 @@ const deleteConversation = async (req, res) => {
   }
 };
 
+// Get or create active conversation for a user
+const getOrCreateActiveConversation = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Find existing active conversation (open or in-progress)
+    let conversation = await conversationsCollection.findOne({
+      userId,
+      status: { $in: ["open", "in-progress"] },
+    });
+
+    // If found, return it
+    if (conversation) {
+      return res.status(200).json({
+        success: true,
+        conversation,
+        isNew: false,
+      });
+    }
+
+    // If no active conversation, create a new one
+    const newConversation = {
+      userId,
+      userName: req.body.userName || "Guest",
+      userEmail: req.body.userEmail || "",
+      userPhone: req.body.userPhone || null,
+      subject: "Support Request",
+      category: "general",
+      status: "open",
+      priority: "normal",
+      assignedTo: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastMessageAt: new Date(),
+    };
+
+    const result = await conversationsCollection.insertOne(newConversation);
+    const conversationId = result.insertedId;
+
+    // Create initial system message
+    const initialMsg = {
+      conversationId: conversationId.toString(),
+      senderId: "system",
+      senderName: "System",
+      senderRole: "system",
+      message: "Welcome to TechLight Support! How can we help you today?",
+      timestamp: new Date(),
+      status: "sent",
+    };
+
+    await messagesCollection.insertOne(initialMsg);
+
+    // Emit socket event to notify admins/moderators
+    try {
+      const io = getIo();
+      io.to("support_team").emit("new_support_conversation", {
+        ...newConversation,
+        _id: conversationId,
+      });
+    } catch (socketError) {
+      console.log("Socket not initialized or error:", socketError.message);
+    }
+
+    res.status(201).json({
+      success: true,
+      conversation: {
+        ...newConversation,
+        _id: conversationId,
+      },
+      isNew: true,
+    });
+  } catch (error) {
+    console.error(" Error getting/creating active conversation:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to get/create conversation",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createConversation,
   getAllConversations,
@@ -282,4 +382,5 @@ module.exports = {
   getUserConversations,
   updateConversationStatus,
   deleteConversation,
+  getOrCreateActiveConversation,
 };

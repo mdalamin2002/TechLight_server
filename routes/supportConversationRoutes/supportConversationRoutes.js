@@ -7,6 +7,7 @@ const {
   getUserConversations,
   updateConversationStatus,
   deleteConversation,
+  getOrCreateActiveConversation,
 } = require("../../controllers/supportConversationController/supportConversationController");
 
 // Create a new conversation
@@ -17,6 +18,9 @@ router.get("/conversations/allConversations", getAllConversations);
 
 // Get conversation by ID
 router.get("/conversations/:id", getConversationById);
+
+// Get or create active conversation for user
+router.post("/conversations/active/:userId", getOrCreateActiveConversation);
 
 // Get conversations by user ID
 router.get("/conversations/user/:userId", getUserConversations);

@@ -50,6 +50,20 @@ async function startServer() {
       });
     });
 
+    // Conversation status update from moderator/admin
+    socket.on("update_conversation_status", ({ conversationId, status, updatedBy }) => {
+      socket.to(conversationId).emit("conversation_status_updated", {
+        conversationId,
+        status,
+        updatedBy,
+      });
+      socket.to("support_team").emit("conversation_status_updated", {
+        conversationId,
+        status,
+        updatedBy,
+      });
+    });
+
     // Handle disconnect
     socket.on("disconnect", () => {
       console.log(" User disconnected:", socket.id);
