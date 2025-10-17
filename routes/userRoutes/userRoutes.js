@@ -1,11 +1,13 @@
 const express = require('express');
-const { registerUser, loginUser, getAllUsers, updateUserRole, trackLogin, checkLock, userRole } = require('../../controllers/userControllers/userControllers');
+const { registerUser, loginUser, getAllUsers, updateUserRole, trackLogin, checkLock, updateUserProfile } = require('../../controllers/userControllers/userControllers');
 const { client } = require('../../config/mongoDB');
 const db = client.db('techLight');
 const usersCollections = db.collection('users');
 const verifyToken = require('../../middlewares/auth');
 const verifyAdmin = require('../../middlewares/admin');
 const userRouter = express.Router();
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
 
 //Register User
 userRouter.post("/auth/register", registerUser);
@@ -22,8 +24,8 @@ userRouter.post("/auth/checkLock", checkLock);
 //Login User
 userRouter.get("/:email", verifyToken, loginUser);
 
-//Getting  User role 
-userRouter.get("/role/:email", userRole);
+// Update user profile (name, phone, avatar)
+userRouter.patch("/:email", verifyToken, upload.single('avatar'), updateUserProfile);
 
 //Update user role
 userRouter.patch("/role/:id",verifyToken,verifyAdmin,updateUserRole)
