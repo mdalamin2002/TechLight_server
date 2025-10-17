@@ -14,6 +14,7 @@ const supportRoute = require("./routes/supportRoutes/supportRoutes");
 const bannerRoute = require("./routes/bannerRoute/bannerRoute");
 const wishlistRouter = require("./routes/wishlistRoutes/wishlistRoutes");
 const userSupportRouter = require("./routes/userSupportRoutes/userSupportRoutes");
+const userOrderRouter = require("./routes/userOrderRoutes/userOrderRoutes");
 const ordersProductRouter = require("./routes/ordersProductRoutes/ordersProductRoutes");
 const usersReviewsRouter = require("./routes/usersReviewsRouter/usersReviewsRouter");
 const cartRouter = require("./routes/addToCartRoutes/addToCartRoutes");
@@ -70,6 +71,9 @@ app.use("/api/banners", bannerRoute);
 
 // user support routes
 app.use("/api/support/user", userSupportRouter );
+
+// user order routes
+app.use("/api/user/orders", userOrderRouter);
 
 
 // 404 and error handlers
