@@ -68,9 +68,13 @@ const updateTicket = async (req, res, next) => {
 const getUserTickets = async (req, res, next) => {
   try {
     const tickets = await supportCollection.find({}).sort({ createdAt: -1 }).toArray();
-    res.status(200).json(tickets);
+    // Ensure tickets is always an array
+    const safeTickets = Array.isArray(tickets) ? tickets : [];
+    res.status(200).json(safeTickets);
   } catch (error) {
-    next(error);
+    console.error("Error fetching user tickets:", error);
+    // Return empty array on error to prevent frontend crashes
+    res.status(200).json([]);
   }
 };
 
