@@ -12,9 +12,13 @@ const productsCollection = db.collection("products");
 // Environment variables
 const store_id = process.env.SSLC_STORE_ID;
 const store_passwd = process.env.SSLC_STORE_PASS;
-const is_live = false; // true for production, false for testing
+const is_live = false;
 
-// Helper: Generate Custom IDs
+// Base URLs
+const backendBaseUrl = process.env.REACT_APP_PAYMENT_BACKEND_URL;
+const frontendBaseUrl = process.env.REACT_APP_PAYMENT_FRONTEND_URL;
+
+// Generate Custom IDs
 function generateCustomId(prefix, length = 6) {
   const random = Math.floor(100000 + Math.random() * 900000)
     .toString()
@@ -22,7 +26,7 @@ function generateCustomId(prefix, length = 6) {
   return `${prefix}-${random}`;
 }
 
-// Helper: Generate Transaction ID (Timestamp + Random)
+// Generate Transaction ID
 function generateTransactionId() {
   const unique = Date.now().toString(36).toUpperCase();
   const random = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -32,128 +36,146 @@ function generateTransactionId() {
 // Create Payment
 const createPayment = async (req, res) => {
   try {
-    // Step 1: Validate Product
-    const product = await productsCollection.findOne({
-      _id: new ObjectId(req.body.productId),
-    });
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
+    const { cart, customer, currency } = req.body;
+
+    if (!cart || !Array.isArray(cart) || cart.length === 0) {
+      return res.status(400).json({
+        message: "Cart is empty or invalid",
+        received: { cart, customer, currency },
+      });
     }
 
-    // Step 2: Generate IDs
+    if (!customer || !customer.email) {
+      return res.status(400).json({
+        message: "Customer email is required",
+        received: { cart, customer, currency },
+      });
+    }
+
+    try {
+      cart.forEach((item) => {
+        if (!item.productId) throw new Error(`Product ID missing for item: ${JSON.stringify(item)}`);
+        if (!item.quantity || item.quantity < 1) throw new Error(`Invalid quantity for item: ${JSON.stringify(item)}`);
+      });
+    } catch (err) {
+      return res.status(400).json({ message: err.message, received: { cart, customer, currency } });
+    }
+
+    // Convert productIds to ObjectId
+    let productIds;
+    try {
+      productIds = cart.map(item => new ObjectId(item.productId));
+    } catch (err) {
+      return res.status(400).json({ message: err.message, received: { cart, customer, currency } });
+    }
+
+    const products = await productsCollection.find({ _id: { $in: productIds } }).toArray();
+
+    if (!products.length) {
+      return res.status(404).json({
+        message: "Products not found",
+        requestedIds: productIds.map(id => id.toString()),
+      });
+    }
+
+    if (products.length !== productIds.length) {
+      const foundIds = products.map(p => p._id.toString());
+      const missingIds = productIds.filter(id => !foundIds.includes(id.toString()));
+      return res.status(404).json({
+        message: "Some products are no longer available",
+        missingProducts: missingIds.map(id => id.toString()),
+        availableProducts: foundIds,
+      });
+    }
+
+    const totalAmount = cart.reduce((sum, item) => {
+      const product = products.find(p => p._id.toString() === item.productId);
+      return sum + (product?.price || 0) * (item.quantity || 1);
+    }, 0);
+
     const tran_id = generateTransactionId();
     const order_id = generateCustomId("ORD");
 
-    // Step 3: Collect order info
-    const order = {
-      ...req.body,
-      order_id,
-      tran_id,
-      status: "pending",
-      createdAt: new Date(),
-      ip_address: req.ip,
-      user_agent: req.headers["user-agent"] || "Unknown",
-    };
 
-    // Step 4: SSLCommerz Data
     const data = {
-      total_amount: product.price,
-      currency: order.currency || "BDT",
+      total_amount: totalAmount,
+      currency: currency || "BDT",
       tran_id,
-      success_url: `http://localhost:5000/api/payments/success/${tran_id}`,
-      fail_url: `http://localhost:5000/api/payments/fail/${tran_id}`,
-      cancel_url: `http://localhost:5000/api/payments/cancel/${tran_id}`,
-      ipn_url: `http://localhost:5000/api/payments/ipn/${tran_id}`,
+      success_url: `${backendBaseUrl}/success/${tran_id}`,
+      fail_url: `${backendBaseUrl}/fail/${tran_id}`,
+      cancel_url: `${backendBaseUrl}/cancel/${tran_id}`,
+      ipn_url: `${backendBaseUrl}/ipn/${tran_id}`,
       shipping_method: "Courier",
-      product_name: product.name,
-      product_category: product.category || "General",
+      product_name: "Multiple Products",
+      product_category: "General",
       product_profile: "general",
       payment_method: "SSLCommerz",
-
-      // Product Info
-      product_id: product._id,
-      quantity: order.quantity || 1,
-      order_note: order.note || "",
-
-      // Customer Info
-      cus_name: order.customerName,
-      cus_email: order.customerEmail || "customer@example.com",
-      cus_phone: order.phone,
-      cus_add1: order.address,
-      cus_city: order.city,
-      cus_country: order.country || "Bangladesh",
-
-      // Shipping Info
-      ship_name: order.customerName,
-      ship_add1: order.address,
-      ship_city: order.city,
-      ship_country: order.country || "Bangladesh",
-
-      // Metadata & Tracking
+      cus_name: customer.name,
+      cus_email: customer.email || "customer@example.com",
+      cus_phone: customer.phone,
+      cus_add1: customer.address,
+      cus_city: customer.city,
+      cus_postcode: customer.postal || "1000",
+      cus_country: customer.country || "Bangladesh",
+      ship_name: customer.name,
+      ship_add1: customer.address,
+      ship_city: customer.city,
+      ship_postcode: customer.postal || "1000",
+      ship_country: customer.country || "Bangladesh",
       order_id,
-      customer_id: order.customerId || null,
+      customer_id: customer.id || null,
       ip_address: req.ip,
       user_agent: req.headers["user-agent"],
       browser_fingerprint: crypto.randomBytes(8).toString("hex"),
-
-      // Timestamps
       createdAt: new Date(),
-      updatedAt: null,
-      verifiedAt: null,
-      paidAt: null,
-      failedAt: null,
-      cancelledAt: null,
     };
 
-    // Step 5: Initialize Payment Gateway
-    const sslcz = new SSLCommerzPayment(store_id, store_passwd, is_live);
-    const apiResponse = await sslcz.init(data);
-
-    if (!apiResponse?.GatewayPageURL) {
-      return res.status(400).json({ message: "Failed to initialize payment session" });
+    if (!store_id || !store_passwd) {
+      return res.status(500).json({ message: "Payment gateway configuration error" });
     }
 
-    // Step 6: Save Initial Payment Data
+    let apiResponse;
+    try {
+      const sslcz = new SSLCommerzPayment(store_id, store_passwd, is_live);
+      const initPromise = sslcz.init(data);
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('SSLCommerz initialization timeout')), 30000)
+      );
+      apiResponse = await Promise.race([initPromise, timeoutPromise]);
+    } catch (err) {
+      return res.status(500).json({ message: "Payment gateway initialization failed", error: err.message });
+    }
+
+    if (!apiResponse?.GatewayPageURL) {
+      return res.status(400).json({ message: "Failed to initialize payment session", response: apiResponse });
+    }
+
     const paymentDoc = {
       order_id,
       tran_id,
-      product,
-      customer: order,
+      products: cart.map(item => ({
+        productId: item.productId,
+        quantity: item.quantity || 1,
+        price: products.find(p => p._id.toString() === item.productId)?.price || 0,
+        name: item.name,
+      })),
+      customer,
       status: "pending",
       paidStatus: false,
-      createdAt: new Date(),
-
-      // Refund & Reporting Fields
-      refund_id: null,
-      refund_status: "none",
-      refund_reason: "",
-      refund_requested_at: null,
-      refund_completed_at: null,
-
-      // Audit & Security Fields
-      verified: false,
+      total_amount: totalAmount,
+      payment_method: "SSLCommerz",
+      currency: currency || "BDT",
       gateway_response: apiResponse,
       ip_address: req.ip,
       user_agent: req.headers["user-agent"],
       browser_fingerprint: data.browser_fingerprint,
-
-      // Analytics
-      total_amount: product.price,
-      payment_method: "SSLCommerz",
-      currency: "BDT",
-      region: order.country || "Bangladesh",
+      createdAt: new Date(),
     };
 
     await paymentsCollection.insertOne(paymentDoc);
 
-    console.log(` Payment session created: ${tran_id}`);
-    res.status(200).json({
-      url: apiResponse.GatewayPageURL,
-      order_id,
-      tran_id,
-    });
-  } catch (error) {
-    console.error(" Payment initiation error:", error);
+    res.status(200).json({ url: apiResponse.GatewayPageURL, order_id, tran_id });
+  } catch {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
@@ -162,28 +184,14 @@ const createPayment = async (req, res) => {
 const paymentSuccess = async (req, res) => {
   try {
     const tran_id = req.params.tranId;
-
     const result = await paymentsCollection.updateOne(
       { tran_id },
-      {
-        $set: {
-          paidStatus: true,
-          status: "success",
-          verified: true,
-          paidAt: new Date(),
-          updatedAt: new Date(),
-        },
-      }
+      { $set: { paidStatus: true, status: "success", verified: true, paidAt: new Date(), updatedAt: new Date() } }
     );
 
-    if (result.modifiedCount > 0) {
-      console.log(` Payment Successful: ${tran_id}`);
-      return res.redirect(`http://localhost:5173/payment/success/${tran_id}`);
-    }
-
+    if (result.modifiedCount > 0) return res.redirect(`${frontendBaseUrl}/success/${tran_id}`);
     res.status(404).json({ message: "Transaction not found or already updated" });
-  } catch (error) {
-    console.error("Success handler error:", error);
+  } catch {
     res.status(500).json({ message: "Server error in success route" });
   }
 };
@@ -196,15 +204,13 @@ const paymentFail = async (req, res) => {
       { tran_id },
       { $set: { status: "failed", failedAt: new Date(), updatedAt: new Date() } }
     );
-    console.log(` Payment Failed: ${tran_id}`);
-    res.redirect(`http://localhost:5173/payment/fail/${tran_id}`);
-  } catch (error) {
-    console.error("Fail handler error:", error);
+    res.redirect(`${frontendBaseUrl}/fail/${tran_id}`);
+  } catch {
     res.status(500).json({ message: "Server error in fail route" });
   }
 };
 
-//  Payment Cancel
+// Payment Cancel
 const paymentCancel = async (req, res) => {
   try {
     const tran_id = req.params.tranId;
@@ -212,11 +218,47 @@ const paymentCancel = async (req, res) => {
       { tran_id },
       { $set: { status: "cancelled", cancelledAt: new Date(), updatedAt: new Date() } }
     );
-    console.log(`Payment Cancelled: ${tran_id}`);
-    res.redirect(`http://localhost:5173/payment/cancel/${tran_id}`);
-  } catch (error) {
-    console.error("Cancel handler error:", error);
+    res.redirect(`${frontendBaseUrl}/cancel/${tran_id}`);
+  } catch {
     res.status(500).json({ message: "Server error in cancel route" });
+  }
+};
+
+// Test Payment
+const testPayment = async (req, res) => {
+  res.json({ message: "Test endpoint working", received: req.body });
+};
+
+// Get Payment Details
+const getPaymentDetails = async (req, res) => {
+  try {
+    const { tranId } = req.params;
+    if (!tranId) return res.status(400).json({ message: "Transaction ID is required" });
+
+    const payment = await paymentsCollection.findOne({ tran_id: tranId });
+    if (!payment) return res.status(404).json({ message: "Payment not found" });
+
+    res.json(payment);
+  } catch {
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+// Check Products
+const checkProducts = async (req, res) => {
+  try {
+    const { productIds } = req.body;
+    const objectIds = productIds.map(id => new ObjectId(id));
+    const products = await productsCollection.find({ _id: { $in: objectIds } }).toArray();
+
+    res.json({
+      requested: productIds,
+      found: products.map(p => p._id.toString()),
+      missing: productIds.filter(id => !products.some(p => p._id.toString() === id)),
+      products: products.map(p => ({ id: p._id.toString(), name: p.name, price: p.price })),
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Error checking products", error: err.message });
   }
 };
 
@@ -225,4 +267,7 @@ module.exports = {
   paymentSuccess,
   paymentFail,
   paymentCancel,
+  testPayment,
+  getPaymentDetails,
+  checkProducts,
 };
