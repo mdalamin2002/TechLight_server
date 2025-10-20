@@ -6,8 +6,10 @@ const {
     paymentCancel,
     testPayment,
     getPaymentDetails,
+    getUserPayments,
     checkProducts,
 } = require('../../controllers/paymentController/paymentController');
+const verifyToken = require('../../middlewares/auth');
 
 const paymentRouter = express.Router();
 
@@ -23,5 +25,8 @@ paymentRouter.get("/cancel/:tranId", paymentCancel);
 paymentRouter.post("/cancel/:tranId", paymentCancel);
 
 paymentRouter.get("/details/:tranId", getPaymentDetails);
+
+// Get all payments for logged-in user
+paymentRouter.get("/user/orders", verifyToken, getUserPayments);
 
 module.exports = paymentRouter;
