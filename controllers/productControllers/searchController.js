@@ -10,20 +10,23 @@ const productsCollection = db.collection("products");
  * Supports: name, description, brand, category, subcategory
  * @route GET /api/products/search
  * @query q - search query string
+ * @query category - filter by specific category (optional)
  * @query page - page number (default: 1)
  * @query limit - items per page (default: 20, max: 100)
  */
 const searchProducts = async (req, res, next) => {
   try {
     const searchQuery = req.query.q?.trim();
+    const categoryFilter = req.query.category?.trim();
     
-    if (!searchQuery) {
+    if (!searchQuery && !categoryFilter) {
       return res.status(200).send({
         data: [],
         page: 1,
         limit: 20,
         total: 0,
         query: "",
+        category: "",
       });
     }
 
@@ -32,19 +35,47 @@ const searchProducts = async (req, res, next) => {
     const skip = (page - 1) * limit;
 
     // Build search filter with multiple field matching
-    const searchRegex = new RegExp(searchQuery, "i"); // Case-insensitive regex
+    const searchRegex = searchQuery ? new RegExp(searchQuery, "i") : null;
+    const categoryRegex = categoryFilter ? new RegExp(categoryFilter, "i") : null;
     
+    // Build dynamic search filter
     const searchFilter = {
       status: { $ne: "inactive" },
-      $or: [
+    };
+
+    // If category filter is specified, prioritize it
+    if (categoryRegex) {
+      searchFilter.$and = [
+        {
+          $or: [
+            { category: categoryRegex },
+            { subCategory: categoryRegex },
+          ],
+        },
+      ];
+      
+      // If search query also provided, add it to the filter
+      if (searchRegex) {
+        searchFilter.$and.push({
+          $or: [
+            { name: searchRegex },
+            { description: searchRegex },
+            { brand: searchRegex },
+            { tags: searchRegex },
+          ],
+        });
+      }
+    } else if (searchRegex) {
+      // No category filter, just search
+      searchFilter.$or = [
         { name: searchRegex },
         { description: searchRegex },
         { brand: searchRegex },
         { category: searchRegex },
         { subCategory: searchRegex },
         { tags: searchRegex },
-      ],
-    };
+      ];
+    }
 
     // Execute search with pagination
     const [items, total] = await Promise.all([
@@ -112,7 +143,8 @@ const searchProducts = async (req, res, next) => {
       page,
       limit,
       total,
-      query: searchQuery,
+      query: searchQuery || "",
+      category: categoryFilter || "",
       hasMore: skip + items.length < total,
     });
   } catch (error) {
@@ -193,8 +225,42 @@ const createSearchIndex = async () => {
   }
 };
 
+/**
+ * Get all available categories with product counts
+ * @route GET /api/products/categories/list
+ */
+const getCategoriesWithCount = async (req, res, next) => {
+  try {
+    const categories = await productsCollection.aggregate([
+      { $match: { status: { $ne: "inactive" } } },
+      {
+        $group: {
+          _id: "$category",
+          count: { $sum: 1 },
+          subCategories: { $addToSet: "$subCategory" },
+        },
+      },
+      { $sort: { count: -1 } },
+    ]).toArray();
+
+    const formattedCategories = categories.map(cat => ({
+      category: cat._id,
+      productCount: cat.count,
+      subCategories: cat.subCategories.filter(Boolean),
+    }));
+
+    res.status(200).send({
+      categories: formattedCategories,
+      total: categories.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   searchProducts,
   getSearchSuggestions,
   createSearchIndex,
+  getCategoriesWithCount,
 };

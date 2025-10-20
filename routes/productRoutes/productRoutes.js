@@ -1,6 +1,6 @@
 const express = require('express');
 const { createProduct, getProductsByCategory,getAllProducts, deleteProduct, getSingleProduct, updateProduct, getProductsByOnlyCategory,} = require('../../controllers/productControllers/productControllers');
-const { searchProducts, getSearchSuggestions } = require('../../controllers/productControllers/searchController');
+const { searchProducts, getSearchSuggestions, getCategoriesWithCount } = require('../../controllers/productControllers/searchController');
 const verifyToken = require('../../middlewares/auth');
 const verifyAdmin = require('../../middlewares/admin');
 const { increaseStock, decreaseStock } = require('../../controllers/productControllers/productStockHistoryController');
@@ -14,6 +14,9 @@ productRouter.get("/search", searchProducts);
 
 //Get search suggestions for autocomplete
 productRouter.get("/search/suggestions", getSearchSuggestions);
+
+//Get categories with product counts (for voice navigation)
+productRouter.get("/categories/list", getCategoriesWithCount);
 
 //Get All Product (public list)
 productRouter.get("/", getAllProducts);
