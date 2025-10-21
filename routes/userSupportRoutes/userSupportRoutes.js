@@ -7,8 +7,9 @@ userSupportRouter.get("/", getUserTickets);
 
 // Route: POST /support/user -> create a ticket
 userSupportRouter.post("/", createTicket);
-// all tickets
-userSupportRouter.get("/", UserAllTickets )
+
+// Route: GET /support/user/all -> get all tickets (for moderators)
+userSupportRouter.get("/all", UserAllTickets);
 
 // update ticket
 userSupportRouter.patch("/:id", updateTicket);
