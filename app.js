@@ -30,6 +30,7 @@ const { errorHandler, notFoundHandler } = require('./middlewares/errorHandler');
 app.use(cors());
 app.use(helmet());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(rateLimit({ windowMs: 60 * 1000, max: 100 }));
 
 //test route
@@ -66,13 +67,14 @@ app.use("/api/returns", returnRouter);
 //payment routes
 app.use('/api/payments', paymentRouter)
 
-// Support admin Tickets 
+// Support admin Tickets
 app.use("/api/support", supportRoute);
+// banners routes
 // Support Conversations (Chat System)
 app.use("/api/support", supportConversationRoute);
 // Support Messages (Chat System)
 app.use("/api/support", supportMessageRoute);
-// banners routes 
+// banners routes
 app.use("/api/banners", bannerRoute);
 
 // user support routes

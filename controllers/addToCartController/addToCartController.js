@@ -83,9 +83,30 @@ const deleteCart = async (req, res, next) => {
     }
 };
 
+// Clear entire cart for a user (after successful payment)
+const clearCart = async (req, res, next) => {
+    try {
+        const { email } = req.query;
+
+        if (!email) {
+            return res.status(400).send({ message: "User email is required to clear cart." });
+        }
+
+        const result = await cartCollection.deleteMany({ userEmail: email });
+
+        res.send({
+            message: "Cart cleared successfully",
+            deletedCount: result.deletedCount
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     getAllCart,
     createCart,
     updateCartQuantity,
     deleteCart,
+    clearCart,
 };
