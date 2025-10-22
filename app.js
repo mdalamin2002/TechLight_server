@@ -25,6 +25,7 @@ const addressRoutes = require("./routes/addressRoutes/addressRoutes");
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { errorHandler, notFoundHandler } = require('./middlewares/errorHandler');
+const offersRouter = require("./routes/offersRoutes/offersRoutes");
 
 //middleware
 app.use(cors());
@@ -56,6 +57,7 @@ app.use('/api/moderator/users-reviews', usersReviewsRouter);
 
 //Admin routes
 app.use("/api/coupons", couponRouter);
+app.use("/api/offers", offersRouter);
 
 //  notifications routes
 app.use("/api/notifications", notificationsRouter);
