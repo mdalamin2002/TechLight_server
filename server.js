@@ -12,6 +12,18 @@ async function startServer() {
   io.on("connection", (socket) => {
     console.log(" User connected:", socket.id);
 
+    // Join user-specific room for targeted notifications
+    socket.on("join_user_room", ({ userId, role }) => {
+      if (userId) {
+        socket.join(`user_${userId}`);
+        console.log(` User ${userId} joined personal room`);
+      }
+      if (role) {
+        socket.join(`role_${role}`);
+        console.log(` User ${userId} joined ${role} room`);
+      }
+    });
+
     // Join support team room (for admins/moderators)
     socket.on("join_support_team", ({ userId, role }) => {
       if (role === "admin" || role === "moderator") {

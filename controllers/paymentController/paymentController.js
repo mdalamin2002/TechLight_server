@@ -244,6 +244,52 @@ const getPaymentDetails = async (req, res) => {
   }
 };
 
+// Get User Payments (All orders for logged-in user)
+const getUserPayments = async (req, res) => {
+  try {
+    const userEmail = req.user?.email; // From verifyToken middleware
+
+    if (!userEmail) {
+      return res.status(401).json({ message: "User email not found" });
+    }
+
+    // Get query parameters for filtering and pagination
+    const { status, page = 1, limit = 10 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Build query
+    const query = { "customer.email": userEmail };
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+
+    // Fetch payments with pagination
+    const payments = await paymentsCollection
+      .find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .toArray();
+
+    // Get total count for pagination
+    const totalCount = await paymentsCollection.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: payments,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(totalCount / parseInt(limit)),
+        totalCount,
+        limit: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching user payments:', error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
 // Check Products
 const checkProducts = async (req, res) => {
   try {
@@ -269,5 +315,6 @@ module.exports = {
   paymentCancel,
   testPayment,
   getPaymentDetails,
+  getUserPayments,
   checkProducts,
 };

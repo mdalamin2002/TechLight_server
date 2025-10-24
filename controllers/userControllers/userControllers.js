@@ -145,6 +145,7 @@ const updateUserRole = async (req, res, next) => {
   }
 };
 
+module.exports = { registerUser, loginUser, usersCollections, getAllUsers, updateUserRole, trackLogin, checkLock,userRole };
 // Update user profile (name, phone, avatar)
 const updateUserProfile = async (req, res, next) => {
   try {

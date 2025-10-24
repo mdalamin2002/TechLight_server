@@ -1,13 +1,15 @@
 const express = require('express');
-const { addAddress, getAddresses, updateAddress, deleteAddress, getDefaultAddress } = require('../../controllers/addressController/addressController');
+const { addAddress, getAddresses, updateAddress, deleteAddress, getDefaultAddress, setDefaultAddress } = require('../../controllers/addressController/addressController');
+const verifyToken = require('../../middlewares/auth');
 const addressRoutes = express.Router();
 
 
-addressRoutes.post("/", addAddress);
-addressRoutes.get("/", getAddresses);
-addressRoutes.put("/:id", updateAddress);
-addressRoutes.delete("/:id", deleteAddress);
-addressRoutes.get('/default', getDefaultAddress);
+addressRoutes.post("/", verifyToken, addAddress);
+addressRoutes.get("/", verifyToken, getAddresses);
+addressRoutes.put("/:id", verifyToken, updateAddress);
+addressRoutes.delete("/:id", verifyToken, deleteAddress);
+addressRoutes.get('/default', verifyToken, getDefaultAddress);
+addressRoutes.patch('/:id/set-default', verifyToken, setDefaultAddress);
 
 
 
