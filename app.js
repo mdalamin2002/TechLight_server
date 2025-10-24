@@ -77,6 +77,7 @@ app.use("/api/support", supportRoute);
 app.use("/api/support", supportConversationRoute);
 // Support Messages (Chat System)
 app.use("/api/support", supportMessageRoute);
+// banners routes 
 // banners routes
 app.use("/api/banners", bannerRoute);
 
