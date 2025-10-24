@@ -25,6 +25,7 @@ const addressRoutes = require("./routes/addressRoutes/addressRoutes");
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { errorHandler, notFoundHandler } = require('./middlewares/errorHandler');
+const aiRouter = require("./routes/aiRoutes/aiRoutes");
 const offersRouter = require("./routes/offersRoutes/offersRoutes");
 
 //middleware
@@ -80,11 +81,12 @@ app.use("/api/support", supportMessageRoute);
 app.use("/api/banners", bannerRoute);
 
 // user support routes
-app.use("/api/support/user", userSupportRouter );
-app.use("/api/support/user/all", userSupportRouter );
+app.use("/api/support/user", userSupportRouter);
+app.use("/api/support/user/all", userSupportRouter);
 
 // user order routes
 app.use("/api/user/orders", userOrderRouter);
+app.use("/api/ai", aiRouter);
 
 
 // 404 and error handlers
