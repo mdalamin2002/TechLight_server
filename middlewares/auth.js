@@ -6,6 +6,7 @@ const verifyToken = async (req, res, next) => {
   try {
     const decoded = await admin.auth().verifyIdToken(token);
     req.decoded = decoded?.email;
+    req.user = { email: decoded?.email, uid: decoded?.uid };
     next();
   } catch (err) {
     return res.status(401).send({ message: "Unauthorized Access" });
