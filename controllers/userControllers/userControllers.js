@@ -2,6 +2,7 @@ const { ObjectId } = require("mongodb");
 const createError = require("http-errors");
 const checkUserStatus = require("../../utils/check_user_status");
 const { client } = require("./../../config/mongoDB");
+const cloudinary = require("../../config/cloudinary");
 const db = client.db("techLight");
 const usersCollections = db.collection("users");
 // Check if any admin user exists
@@ -19,6 +20,10 @@ const registerUser = async (req, res, next) => {
     userData.last_loggedIn = new Date();
     userData.failedAttempts = 0;
     userData.lockUntil = null;
+    if (!userData.photoURL && !userData.avatar) {
+      const nameOrEmail = encodeURIComponent(userData?.name || userData?.email || "User");
+      userData.photoURL = `https://ui-avatars.com/api/?name=${nameOrEmail}&background=random`;
+    }
 
     const query = { email: userData?.email };
     const alreadyExist = await usersCollections.findOne(query);
@@ -141,3 +146,55 @@ const updateUserRole = async (req, res, next) => {
 };
 
 module.exports = { registerUser, loginUser, usersCollections, getAllUsers, updateUserRole, trackLogin, checkLock,userRole };
+// Update user profile (name, phone, avatar)
+const updateUserProfile = async (req, res, next) => {
+  try {
+    const rawEmail = req.params.email;
+    const email = decodeURIComponent(rawEmail);
+    const decodedEmail = req.decoded;
+    if (email !== decodedEmail) {
+      return res.status(401).send({ message: "Unauthorize access" });
+    }
+
+    const user = await usersCollections.findOne({ email });
+    if (!user) return res.status(404).send({ message: "User not found" });
+
+    const toSet = {};
+    if (typeof req.body?.name === "string") toSet.name = req.body.name;
+    if (typeof req.body?.phone === "string") toSet.phone = req.body.phone;
+
+    // If avatar file present, upload to Cloudinary
+    if (req.file && req.file.buffer) {
+      const uploadResult = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: "techlight/avatars", resource_type: "image" },
+          (error, result) => (error ? reject(error) : resolve(result))
+        );
+        stream.end(req.file.buffer);
+      });
+      toSet.avatar = uploadResult.secure_url;
+    }
+
+    if (Object.keys(toSet).length === 0) {
+      return res.status(400).send({ message: "No valid fields to update" });
+    }
+
+    await usersCollections.updateOne({ email }, { $set: { ...toSet, updated_at: new Date() } });
+    const updated = await usersCollections.findOne({ email });
+    return res.status(200).send(updated);
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { 
+  registerUser, 
+  loginUser, 
+  usersCollections, 
+  getAllUsers, 
+  updateUserRole, 
+  trackLogin, 
+  checkLock,
+  userRole,
+  updateUserProfile
+};
