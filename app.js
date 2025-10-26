@@ -25,6 +25,8 @@ const addressRoutes = require("./routes/addressRoutes/addressRoutes");
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { errorHandler, notFoundHandler } = require('./middlewares/errorHandler');
+const aiRouter = require("./routes/aiRoutes/aiRoutes");
+const offersRouter = require("./routes/offersRoutes/offersRoutes");
 
 //middleware
 app.use(cors());
@@ -56,6 +58,7 @@ app.use('/api/moderator/users-reviews', usersReviewsRouter);
 
 //Admin routes
 app.use("/api/coupons", couponRouter);
+app.use("/api/offers", offersRouter);
 
 //  notifications routes
 app.use("/api/notifications", notificationsRouter);
@@ -74,15 +77,17 @@ app.use("/api/support", supportRoute);
 app.use("/api/support", supportConversationRoute);
 // Support Messages (Chat System)
 app.use("/api/support", supportMessageRoute);
+// banners routes 
 // banners routes
 app.use("/api/banners", bannerRoute);
 
 // user support routes
-app.use("/api/support/user", userSupportRouter );
-app.use("/api/support/user/all", userSupportRouter );
+app.use("/api/support/user", userSupportRouter);
+app.use("/api/support/user/all", userSupportRouter);
 
 // user order routes
 app.use("/api/user/orders", userOrderRouter);
+app.use("/api/ai", aiRouter);
 
 
 // 404 and error handlers
