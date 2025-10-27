@@ -3,6 +3,7 @@ const { client } = require("./../../config/mongoDB");
 const db = client.db("techLight");
 const createError = require("http-errors");
 const productsCollection = db.collection("products");
+const productReviewsCollection = db.collection("productReviews"); // Add reviews collection
 
 //Create Product
 const createProduct = async (req, res, next) => {
@@ -35,6 +36,46 @@ const getAllProducts = async (req, res, next) => {
       productsCollection.countDocuments(filter),
     ]);
 
+    // Add dynamic ratings to all products
+    if (items.length > 0) {
+      // Get all product IDs
+      const productIds = items.map(item => item._id);
+
+      // Get reviews for all these products
+      const reviews = await productReviewsCollection
+        .find({
+          productId: { $in: productIds },
+          status: "approved"
+        })
+        .toArray();
+
+      // Group reviews by product ID
+      const reviewsByProduct = {};
+      reviews.forEach(review => {
+        const productId = review.productId.toString();
+        if (!reviewsByProduct[productId]) {
+          reviewsByProduct[productId] = [];
+        }
+        reviewsByProduct[productId].push(review);
+      });
+
+      // Calculate dynamic ratings for each product
+      items.forEach(item => {
+        const productId = item._id.toString();
+        const productReviews = reviewsByProduct[productId] || [];
+
+        if (productReviews.length > 0) {
+          // Calculate average rating
+          const totalRating = productReviews.reduce((sum, review) => sum + review.rating, 0);
+          const averageRating = totalRating / productReviews.length;
+
+          // Add dynamic rating and total reviews to product data
+          item.rating = parseFloat(averageRating.toFixed(1));
+          item.totalReviews = productReviews.length;
+        }
+      });
+    }
+
     res.status(200).send({ data: items, page, limit, total });
   } catch (error) {
     next(error);
@@ -53,6 +94,22 @@ const getSingleProduct = async (req, res, next) => {
     if (!result) {
       return next(createError(404, 'Product not found'));
     }
+
+    // Calculate dynamic rating based on reviews
+    const reviews = await productReviewsCollection
+      .find({ productId: new ObjectId(productId), status: "approved" })
+      .toArray();
+
+    if (reviews.length > 0) {
+      // Calculate average rating
+      const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+      const averageRating = totalRating / reviews.length;
+
+      // Add dynamic rating and total reviews to product data
+      result.rating = parseFloat(averageRating.toFixed(1));
+      result.totalReviews = reviews.length;
+    }
+
     res.status(200).send(result);
   } catch (error) {
     next(error);
@@ -74,7 +131,7 @@ const updateProduct = async (req, res, next) => {
     updateData.updated_at = new Date();
     updateData.created_at = existingProduct.created_at;
     if (!updateData.status) {
-      updateData.status = existingProduct.status; 
+      updateData.status = existingProduct.status;
     }
     const result = await productsCollection.updateOne(
       { _id: new ObjectId(id) },
@@ -109,24 +166,104 @@ const getProductsByCategory = async (req, res, next) => {
   const { category, subCategory } = req.params;
   try {
     const result = await productsCollection.find({ category, subCategory, status: { $ne: 'inactive' } }).toArray();
+
+    // Add dynamic ratings to products in this category
+    if (result.length > 0) {
+      // Get all product IDs
+      const productIds = result.map(item => item._id);
+
+      // Get reviews for all these products
+      const reviews = await productReviewsCollection
+        .find({
+          productId: { $in: productIds },
+          status: "approved"
+        })
+        .toArray();
+
+      // Group reviews by product ID
+      const reviewsByProduct = {};
+      reviews.forEach(review => {
+        const productId = review.productId.toString();
+        if (!reviewsByProduct[productId]) {
+          reviewsByProduct[productId] = [];
+        }
+        reviewsByProduct[productId].push(review);
+      });
+
+      // Calculate dynamic ratings for each product
+      result.forEach(item => {
+        const productId = item._id.toString();
+        const productReviews = reviewsByProduct[productId] || [];
+
+        if (productReviews.length > 0) {
+          // Calculate average rating
+          const totalRating = productReviews.reduce((sum, review) => sum + review.rating, 0);
+          const averageRating = totalRating / productReviews.length;
+
+          // Add dynamic rating and total reviews to product data
+          item.rating = parseFloat(averageRating.toFixed(1));
+          item.totalReviews = productReviews.length;
+        }
+      });
+    }
+
     res.status(200).send(result);
   } catch (error) {
     next(error);
   }
 };
+
 //Get Product Data category wise
 const getProductsByOnlyCategory = async (req, res, next) => {
   const { category } = req.params;
   try {
     const result = await productsCollection.find({ category:category, status: { $ne: 'inactive' } }).toArray();
+
+    // Add dynamic ratings to products in this category
+    if (result.length > 0) {
+      // Get all product IDs
+      const productIds = result.map(item => item._id);
+
+      // Get reviews for all these products
+      const reviews = await productReviewsCollection
+        .find({
+          productId: { $in: productIds },
+          status: "approved"
+        })
+        .toArray();
+
+      // Group reviews by product ID
+      const reviewsByProduct = {};
+      reviews.forEach(review => {
+        const productId = review.productId.toString();
+        if (!reviewsByProduct[productId]) {
+          reviewsByProduct[productId] = [];
+        }
+        reviewsByProduct[productId].push(review);
+      });
+
+      // Calculate dynamic ratings for each product
+      result.forEach(item => {
+        const productId = item._id.toString();
+        const productReviews = reviewsByProduct[productId] || [];
+
+        if (productReviews.length > 0) {
+          // Calculate average rating
+          const totalRating = productReviews.reduce((sum, review) => sum + review.rating, 0);
+          const averageRating = totalRating / productReviews.length;
+
+          // Add dynamic rating and total reviews to product data
+          item.rating = parseFloat(averageRating.toFixed(1));
+          item.totalReviews = productReviews.length;
+        }
+      });
+    }
+
     res.status(200).send({ data: result });
   } catch (error) {
     next(error);
   }
 };
-
-
-
 
 module.exports = {
   createProduct,
