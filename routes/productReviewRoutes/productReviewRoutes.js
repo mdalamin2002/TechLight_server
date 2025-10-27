@@ -5,7 +5,8 @@ const {
   updateProductReview,
   deleteProductReview,
   markReviewHelpful,
-  getUserProductReview
+  getUserProductReview,
+  getAllApprovedReviews
 } = require('../../controllers/productReviewController/productReviewController');
 const verifyToken = require('../../middlewares/auth');
 const productReviewRouter = express.Router();
@@ -27,5 +28,8 @@ productReviewRouter.delete('/:reviewId', verifyToken, deleteProductReview);
 
 // Mark review as helpful (requires authentication)
 productReviewRouter.patch('/:reviewId/helpful', verifyToken, markReviewHelpful);
+
+// Get all approved reviews for homepage (public)
+productReviewRouter.get('/homepage', getAllApprovedReviews);
 
 module.exports = productReviewRouter;

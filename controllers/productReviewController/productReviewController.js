@@ -3,6 +3,7 @@ const { client } = require("../../config/mongoDB");
 const db = client.db("techLight");
 const createError = require("http-errors");
 const productReviewsCollection = db.collection("productReviews");
+const productsCollection = db.collection("products");
 
 // Create a new product review
 const createProductReview = async (req, res, next) => {
@@ -288,11 +289,66 @@ const getUserProductReview = async (req, res, next) => {
   }
 };
 
+// Get all approved reviews for homepage
+const getAllApprovedReviews = async (req, res, next) => {
+  try {
+    const { limit = 12 } = req.query;
+
+    console.log("Fetching reviews from database...");
+    const reviews = await productReviewsCollection
+      .find({ status: "approved" })
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .toArray();
+
+    console.log("Found reviews:", reviews.length);
+
+    // Get product details for each review
+    const productIds = reviews.map(review => review.productId);
+    const products = await productsCollection
+      .find({ _id: { $in: productIds } })
+      .toArray();
+
+    // Create a map of products for quick lookup
+    const productMap = {};
+    products.forEach(product => {
+      productMap[product._id.toString()] = product;
+    });
+
+    // Combine review data with product information
+    const enrichedReviews = reviews.map(review => {
+      const product = productMap[review.productId.toString()];
+      return {
+        _id: review._id,
+        userName: review.userName || "Anonymous",
+        userPhotoURL: review.userPhotoURL || `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 20) + 1}`,
+        rating: review.rating,
+        createdAt: review.createdAt,
+        comment: review.comment || review.title || "Great product!",
+        productName: product ? product.name : "Unknown Product",
+        helpful: review.helpful || 0,
+        verified: review.verified || true
+      };
+    });
+
+    console.log("Sending response with reviews:", enrichedReviews.length);
+    res.status(200).json({
+      success: true,
+      data: enrichedReviews,
+      total: enrichedReviews.length
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createProductReview,
   getProductReviews,
   updateProductReview,
   deleteProductReview,
   markReviewHelpful,
-  getUserProductReview
+  getUserProductReview,
+  getAllApprovedReviews
 };
