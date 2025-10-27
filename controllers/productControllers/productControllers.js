@@ -269,7 +269,7 @@ const getProductsByOnlyCategory = async (req, res, next) => {
 //Get Top Selling Products based on sales volume
 const getTopSellingProducts = async (req, res, next) => {
   try {
-    const limit = parseInt(req.query.limit) || 8; // Default to 8 products
+    const limit = parseInt(req.query.limit) || 4; // Default to 4 products
 
     // First, get all successful payments
     const successfulPayments = await paymentsCollection
@@ -367,6 +367,214 @@ const getTopSellingProducts = async (req, res, next) => {
   }
 };
 
+//Get High Rated Products (rating >= 4.0)
+const getHighRatedProducts = async (req, res, next) => {
+  try {
+    const limit = parseInt(req.query.limit) || 4; // Default to 4 products
+
+    // Get all products with status active
+    const products = await productsCollection
+      .find({ status: { $ne: "inactive" } })
+      .toArray();
+
+    // Add dynamic ratings to all products
+    if (products.length > 0) {
+      // Get all product IDs
+      const productIds = products.map(item => item._id);
+
+      // Get reviews for all these products
+      const reviews = await productReviewsCollection
+        .find({
+          productId: { $in: productIds },
+          status: "approved"
+        })
+        .toArray();
+
+      // Group reviews by product ID
+      const reviewsByProduct = {};
+      reviews.forEach(review => {
+        const productId = review.productId.toString();
+        if (!reviewsByProduct[productId]) {
+          reviewsByProduct[productId] = [];
+        }
+        reviewsByProduct[productId].push(review);
+      });
+
+      // Calculate dynamic ratings for each product
+      products.forEach(item => {
+        const productId = item._id.toString();
+        const productReviews = reviewsByProduct[productId] || [];
+
+        if (productReviews.length > 0) {
+          // Calculate average rating
+          const totalRating = productReviews.reduce((sum, review) => sum + review.rating, 0);
+          const averageRating = totalRating / productReviews.length;
+
+          // Add dynamic rating and total reviews to product data
+          item.rating = parseFloat(averageRating.toFixed(1));
+          item.totalReviews = productReviews.length;
+        }
+      });
+    }
+
+    // Filter products with rating >= 4.0 and sort by rating (highest first)
+    const highRatedProducts = products
+      .filter(product => product.rating >= 4.0)
+      .sort((a, b) => b.rating - a.rating)
+      .slice(0, limit);
+
+    res.status(200).send({ data: highRatedProducts, limit });
+  } catch (error) {
+    next(error);
+  }
+};
+
+//Get Discounted Products (products with regularPrice > price)
+const getDiscountedProducts = async (req, res, next) => {
+  try {
+    const limit = parseInt(req.query.limit) || 4; // Default to 4 products
+
+    // Get products where regularPrice > price (indicating a discount)
+    const products = await productsCollection
+      .find({
+        status: { $ne: "inactive" },
+        $expr: { $gt: ["$regularPrice", "$price"] }
+      })
+      .toArray();
+
+    // Add dynamic ratings to all products
+    if (products.length > 0) {
+      // Get all product IDs
+      const productIds = products.map(item => item._id);
+
+      // Get reviews for all these products
+      const reviews = await productReviewsCollection
+        .find({
+          productId: { $in: productIds },
+          status: "approved"
+        })
+        .toArray();
+
+      // Group reviews by product ID
+      const reviewsByProduct = {};
+      reviews.forEach(review => {
+        const productId = review.productId.toString();
+        if (!reviewsByProduct[productId]) {
+          reviewsByProduct[productId] = [];
+        }
+        reviewsByProduct[productId].push(review);
+      });
+
+      // Calculate dynamic ratings for each product
+      products.forEach(item => {
+        const productId = item._id.toString();
+        const productReviews = reviewsByProduct[productId] || [];
+
+        if (productReviews.length > 0) {
+          // Calculate average rating
+          const totalRating = productReviews.reduce((sum, review) => sum + review.rating, 0);
+          const averageRating = totalRating / productReviews.length;
+
+          // Add dynamic rating and total reviews to product data
+          item.rating = parseFloat(averageRating.toFixed(1));
+          item.totalReviews = productReviews.length;
+        }
+
+        // Calculate discount percentage
+        const discountPercentage = Math.round(((item.regularPrice - item.price) / item.regularPrice) * 100);
+        item.discountPercentage = discountPercentage;
+      });
+    }
+
+    // Sort by discount percentage (highest first) and limit
+    const discountedProducts = products
+      .sort((a, b) => b.discountPercentage - a.discountPercentage)
+      .slice(0, limit);
+
+    res.status(200).send({ data: discountedProducts, limit });
+  } catch (error) {
+    next(error);
+  }
+};
+
+//Get Selected Products (featured/selected products)
+const getSelectedProducts = async (req, res, next) => {
+  try {
+    const limit = parseInt(req.query.limit) || 4; // Default to 4 products
+
+    // Get products marked as featured or selected
+    const products = await productsCollection
+      .find({
+        status: { $ne: "inactive" },
+        $or: [
+          { isFeatured: true },
+          { isSelected: true },
+          { featured: true },
+          { selected: true }
+        ]
+      })
+      .toArray();
+
+    // If no featured products found, get some random products
+    let selectedProducts = products;
+    if (selectedProducts.length === 0) {
+      selectedProducts = await productsCollection
+        .aggregate([
+          { $match: { status: { $ne: "inactive" } } },
+          { $sample: { size: limit } }
+        ])
+        .toArray();
+    }
+
+    // Add dynamic ratings to all products
+    if (selectedProducts.length > 0) {
+      // Get all product IDs
+      const productIds = selectedProducts.map(item => item._id);
+
+      // Get reviews for all these products
+      const reviews = await productReviewsCollection
+        .find({
+          productId: { $in: productIds },
+          status: "approved"
+        })
+        .toArray();
+
+      // Group reviews by product ID
+      const reviewsByProduct = {};
+      reviews.forEach(review => {
+        const productId = review.productId.toString();
+        if (!reviewsByProduct[productId]) {
+          reviewsByProduct[productId] = [];
+        }
+        reviewsByProduct[productId].push(review);
+      });
+
+      // Calculate dynamic ratings for each product
+      selectedProducts.forEach(item => {
+        const productId = item._id.toString();
+        const productReviews = reviewsByProduct[productId] || [];
+
+        if (productReviews.length > 0) {
+          // Calculate average rating
+          const totalRating = productReviews.reduce((sum, review) => sum + review.rating, 0);
+          const averageRating = totalRating / productReviews.length;
+
+          // Add dynamic rating and total reviews to product data
+          item.rating = parseFloat(averageRating.toFixed(1));
+          item.totalReviews = productReviews.length;
+        }
+      });
+    }
+
+    // Limit the results
+    const limitedProducts = selectedProducts.slice(0, limit);
+
+    res.status(200).send({ data: limitedProducts, limit });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createProduct,
   getProductsByCategory,
@@ -376,5 +584,8 @@ module.exports = {
   updateProduct,
   productsCollection,
   getProductsByOnlyCategory,
-  getTopSellingProducts // Add the new function to exports
+  getTopSellingProducts,
+  getHighRatedProducts,
+  getDiscountedProducts,
+  getSelectedProducts
 };

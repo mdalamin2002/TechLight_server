@@ -1,5 +1,5 @@
 const express = require('express');
-const { createProduct, getProductsByCategory,getAllProducts, deleteProduct, getSingleProduct, updateProduct, getProductsByOnlyCategory, getTopSellingProducts} = require('../../controllers/productControllers/productControllers');
+const { createProduct, getProductsByCategory,getAllProducts, deleteProduct, getSingleProduct, updateProduct, getProductsByOnlyCategory, getTopSellingProducts, getHighRatedProducts, getDiscountedProducts, getSelectedProducts} = require('../../controllers/productControllers/productControllers');
 const { searchProducts, getSearchSuggestions, getCategoriesWithCount } = require('../../controllers/productControllers/searchController');
 const verifyToken = require('../../middlewares/auth');
 const verifyAdmin = require('../../middlewares/admin');
@@ -23,6 +23,15 @@ productRouter.get("/", getAllProducts);
 
 //Get top selling products
 productRouter.get("/top-selling", getTopSellingProducts);
+
+//Get high rated products
+productRouter.get("/high-rated", getHighRatedProducts);
+
+//Get discounted products
+productRouter.get("/discounted", getDiscountedProducts);
+
+//Get selected/featured products
+productRouter.get("/selected", getSelectedProducts);
 
 //Get single product
 productRouter.get("/details/:id", getSingleProduct);
