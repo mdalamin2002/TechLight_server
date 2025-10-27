@@ -4,6 +4,7 @@ const db = client.db("techLight");
 const createError = require("http-errors");
 const productsCollection = db.collection("products");
 const productReviewsCollection = db.collection("productReviews"); // Add reviews collection
+const paymentsCollection = db.collection("payments"); // Add payments collection
 
 //Create Product
 const createProduct = async (req, res, next) => {
@@ -265,13 +266,115 @@ const getProductsByOnlyCategory = async (req, res, next) => {
   }
 };
 
+//Get Top Selling Products based on sales volume
+const getTopSellingProducts = async (req, res, next) => {
+  try {
+    const limit = parseInt(req.query.limit) || 8; // Default to 8 products
+
+    // First, get all successful payments
+    const successfulPayments = await paymentsCollection
+      .find({ status: "success", paidStatus: true })
+      .toArray();
+
+    // Calculate sales quantities for each product
+    const productSales = {};
+    successfulPayments.forEach(payment => {
+      if (payment.products && Array.isArray(payment.products)) {
+        payment.products.forEach(product => {
+          if (product.productId) {
+            if (!productSales[product.productId]) {
+              productSales[product.productId] = {
+                totalQuantitySold: 0,
+                totalRevenue: 0
+              };
+            }
+            const quantity = parseInt(product.quantity) || 0;
+            const price = parseFloat(product.price) || 0;
+            productSales[product.productId].totalQuantitySold += quantity;
+            productSales[product.productId].totalRevenue += quantity * price;
+          }
+        });
+      }
+    });
+
+    // Convert to array and sort by quantity sold
+    const salesArray = Object.entries(productSales)
+      .map(([productId, salesData]) => ({
+        productId,
+        ...salesData
+      }))
+      .sort((a, b) => b.totalQuantitySold - a.totalQuantitySold)
+      .slice(0, limit);
+
+    // Get product details for the top selling products
+    const productIds = salesArray.map(item => new ObjectId(item.productId));
+    const products = await productsCollection
+      .find({ _id: { $in: productIds } })
+      .toArray();
+
+    // Combine sales data with product details
+    const topProducts = salesArray.map(sale => {
+      const product = products.find(p => p._id.toString() === sale.productId);
+      if (!product) return null;
+
+      return {
+        ...product,
+        totalQuantitySold: sale.totalQuantitySold,
+        totalRevenue: sale.totalRevenue
+      };
+    }).filter(Boolean); // Remove any null entries
+
+    // Add dynamic ratings to all products
+    if (topProducts.length > 0) {
+      // Get reviews for all these products
+      const reviews = await productReviewsCollection
+        .find({
+          productId: { $in: topProducts.map(p => p._id) },
+          status: "approved"
+        })
+        .toArray();
+
+      // Group reviews by product ID
+      const reviewsByProduct = {};
+      reviews.forEach(review => {
+        const productId = review.productId.toString();
+        if (!reviewsByProduct[productId]) {
+          reviewsByProduct[productId] = [];
+        }
+        reviewsByProduct[productId].push(review);
+      });
+
+      // Calculate dynamic ratings for each product
+      topProducts.forEach(item => {
+        const productId = item._id.toString();
+        const productReviews = reviewsByProduct[productId] || [];
+
+        if (productReviews.length > 0) {
+          // Calculate average rating
+          const totalRating = productReviews.reduce((sum, review) => sum + review.rating, 0);
+          const averageRating = totalRating / productReviews.length;
+
+          // Add dynamic rating and total reviews to product data
+          item.rating = parseFloat(averageRating.toFixed(1));
+          item.totalReviews = productReviews.length;
+        }
+      });
+    }
+
+    res.status(200).send({ data: topProducts, limit });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createProduct,
   getProductsByCategory,
   getAllProducts,
   deleteProduct,
   getSingleProduct,
-    updateProduct,
+  updateProduct,
   productsCollection,
-    getProductsByOnlyCategory
+  getProductsByOnlyCategory,
+  getTopSellingProducts // Add the new function to exports
 };
