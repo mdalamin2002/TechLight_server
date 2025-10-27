@@ -6,7 +6,12 @@ const verifyToken = async (req, res, next) => {
   try {
     const decoded = await admin.auth().verifyIdToken(token);
     req.decoded = decoded?.email;
-    req.user = { email: decoded?.email, uid: decoded?.uid };
+    req.user = {
+      email: decoded?.email,
+      uid: decoded?.uid,
+      displayName: decoded?.name || decoded?.displayName,
+      photoURL: decoded?.picture || decoded?.photoURL
+    };
     next();
   } catch (err) {
     return res.status(401).send({ message: "Unauthorized Access" });
