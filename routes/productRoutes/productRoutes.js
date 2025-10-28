@@ -1,5 +1,5 @@
 const express = require('express');
-const { createProduct, getProductsByCategory,getAllProducts, deleteProduct, getSingleProduct, updateProduct, getProductsByOnlyCategory,} = require('../../controllers/productControllers/productControllers');
+const { createProduct, getProductsByCategory,getAllProducts, deleteProduct, getSingleProduct, updateProduct, getProductsByOnlyCategory, getTopSellingProducts, getHighRatedProducts, getDiscountedProducts, getSelectedProducts} = require('../../controllers/productControllers/productControllers');
 const { searchProducts, getSearchSuggestions, getCategoriesWithCount } = require('../../controllers/productControllers/searchController');
 const verifyToken = require('../../middlewares/auth');
 const verifyAdmin = require('../../middlewares/admin');
@@ -21,10 +21,22 @@ productRouter.get("/categories/list", getCategoriesWithCount);
 //Get All Product (public list)
 productRouter.get("/", getAllProducts);
 
+//Get top selling products
+productRouter.get("/top-selling", getTopSellingProducts);
+
+//Get high rated products
+productRouter.get("/high-rated", getHighRatedProducts);
+
+//Get discounted products
+productRouter.get("/discounted", getDiscountedProducts);
+
+//Get selected/featured products
+productRouter.get("/selected", getSelectedProducts);
+
 //Get single product
 productRouter.get("/details/:id", getSingleProduct);
 
-//Update product 
+//Update product
 productRouter.put("/update/:id",verifyToken,verifyAdmin, updateProduct);
 
 // Soft delete Product (keep legacy path for now)
@@ -38,10 +50,10 @@ productRouter.get("/:category/:subCategory", getProductsByCategory);
 //Get Product data category wise
 productRouter.get("/:category", getProductsByOnlyCategory);
 
-//Product increase 
+//Product increase
 productRouter.patch("/:id/increase",verifyToken,verifyAdmin, increaseStock);
 
-//product decrease 
+//product decrease
 productRouter.patch("/:id/decrease",verifyToken,verifyAdmin, decreaseStock);
 
 module.exports = productRouter;
