@@ -1,5 +1,6 @@
 const express = require('express');
 const {
+    getPayments,
     createPayment,
     paymentSuccess,
     paymentFail,
@@ -10,6 +11,7 @@ const {
     checkProducts,
 } = require('../../controllers/paymentController/paymentController');
 const verifyToken = require('../../middlewares/auth');
+const verifyAdmin = require('../../middlewares/admin');
 
 const paymentRouter = express.Router();
 
@@ -17,6 +19,8 @@ paymentRouter.post("/order", createPayment);
 paymentRouter.post("/test", testPayment);
 paymentRouter.post("/check-products", checkProducts);
 
+//get all Payments
+paymentRouter.get("/", verifyToken, verifyAdmin,getPayments);
 paymentRouter.get("/success/:tranId", paymentSuccess);
 paymentRouter.post("/success/:tranId", paymentSuccess);
 paymentRouter.get("/fail/:tranId", paymentFail);

@@ -18,6 +18,17 @@ const is_live = false;
 const backendBaseUrl = process.env.REACT_APP_PAYMENT_BACKEND_URL;
 const frontendBaseUrl = process.env.REACT_APP_PAYMENT_FRONTEND_URL;
 
+// get all Payments
+const getPayments = async (req, res, next) => {
+  try {
+    const result = await paymentsCollection.find().toArray();
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 // Generate Custom IDs
 function generateCustomId(prefix, length = 6) {
   const random = Math.floor(100000 + Math.random() * 900000)
@@ -54,48 +65,59 @@ const createPayment = async (req, res) => {
 
     try {
       cart.forEach((item) => {
-        if (!item.productId) throw new Error(`Product ID missing for item: ${JSON.stringify(item)}`);
-        if (!item.quantity || item.quantity < 1) throw new Error(`Invalid quantity for item: ${JSON.stringify(item)}`);
+        if (!item.productId)
+          throw new Error(
+            `Product ID missing for item: ${JSON.stringify(item)}`
+          );
+        if (!item.quantity || item.quantity < 1)
+          throw new Error(`Invalid quantity for item: ${JSON.stringify(item)}`);
       });
     } catch (err) {
-      return res.status(400).json({ message: err.message, received: { cart, customer, currency } });
+      return res
+        .status(400)
+        .json({ message: err.message, received: { cart, customer, currency } });
     }
 
     // Convert productIds to ObjectId
     let productIds;
     try {
-      productIds = cart.map(item => new ObjectId(item.productId));
+      productIds = cart.map((item) => new ObjectId(item.productId));
     } catch (err) {
-      return res.status(400).json({ message: err.message, received: { cart, customer, currency } });
+      return res
+        .status(400)
+        .json({ message: err.message, received: { cart, customer, currency } });
     }
 
-    const products = await productsCollection.find({ _id: { $in: productIds } }).toArray();
+    const products = await productsCollection
+      .find({ _id: { $in: productIds } })
+      .toArray();
 
     if (!products.length) {
       return res.status(404).json({
         message: "Products not found",
-        requestedIds: productIds.map(id => id.toString()),
+        requestedIds: productIds.map((id) => id.toString()),
       });
     }
 
     if (products.length !== productIds.length) {
-      const foundIds = products.map(p => p._id.toString());
-      const missingIds = productIds.filter(id => !foundIds.includes(id.toString()));
+      const foundIds = products.map((p) => p._id.toString());
+      const missingIds = productIds.filter(
+        (id) => !foundIds.includes(id.toString())
+      );
       return res.status(404).json({
         message: "Some products are no longer available",
-        missingProducts: missingIds.map(id => id.toString()),
+        missingProducts: missingIds.map((id) => id.toString()),
         availableProducts: foundIds,
       });
     }
 
     const totalAmount = cart.reduce((sum, item) => {
-      const product = products.find(p => p._id.toString() === item.productId);
+      const product = products.find((p) => p._id.toString() === item.productId);
       return sum + (product?.price || 0) * (item.quantity || 1);
     }, 0);
 
     const tran_id = generateTransactionId();
     const order_id = generateCustomId("ORD");
-
 
     const data = {
       total_amount: totalAmount,
@@ -131,7 +153,9 @@ const createPayment = async (req, res) => {
     };
 
     if (!store_id || !store_passwd) {
-      return res.status(500).json({ message: "Payment gateway configuration error" });
+      return res
+        .status(500)
+        .json({ message: "Payment gateway configuration error" });
     }
 
     let apiResponse;
@@ -139,24 +163,38 @@ const createPayment = async (req, res) => {
       const sslcz = new SSLCommerzPayment(store_id, store_passwd, is_live);
       const initPromise = sslcz.init(data);
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('SSLCommerz initialization timeout')), 30000)
+        setTimeout(
+          () => reject(new Error("SSLCommerz initialization timeout")),
+          30000
+        )
       );
       apiResponse = await Promise.race([initPromise, timeoutPromise]);
     } catch (err) {
-      return res.status(500).json({ message: "Payment gateway initialization failed", error: err.message });
+      return res
+        .status(500)
+        .json({
+          message: "Payment gateway initialization failed",
+          error: err.message,
+        });
     }
 
     if (!apiResponse?.GatewayPageURL) {
-      return res.status(400).json({ message: "Failed to initialize payment session", response: apiResponse });
+      return res
+        .status(400)
+        .json({
+          message: "Failed to initialize payment session",
+          response: apiResponse,
+        });
     }
 
     const paymentDoc = {
       order_id,
       tran_id,
-      products: cart.map(item => ({
+      products: cart.map((item) => ({
         productId: item.productId,
         quantity: item.quantity || 1,
-        price: products.find(p => p._id.toString() === item.productId)?.price || 0,
+        price:
+          products.find((p) => p._id.toString() === item.productId)?.price || 0,
         name: item.name,
       })),
       customer,
@@ -174,7 +212,9 @@ const createPayment = async (req, res) => {
 
     await paymentsCollection.insertOne(paymentDoc);
 
-    res.status(200).json({ url: apiResponse.GatewayPageURL, order_id, tran_id });
+    res
+      .status(200)
+      .json({ url: apiResponse.GatewayPageURL, order_id, tran_id });
   } catch {
     res.status(500).json({ message: "Internal Server Error" });
   }
@@ -186,11 +226,22 @@ const paymentSuccess = async (req, res) => {
     const tran_id = req.params.tranId;
     const result = await paymentsCollection.updateOne(
       { tran_id },
-      { $set: { paidStatus: true, status: "success", verified: true, paidAt: new Date(), updatedAt: new Date() } }
+      {
+        $set: {
+          paidStatus: true,
+          status: "success",
+          verified: true,
+          paidAt: new Date(),
+          updatedAt: new Date(),
+        },
+      }
     );
 
-    if (result.modifiedCount > 0) return res.redirect(`${frontendBaseUrl}/success/${tran_id}`);
-    res.status(404).json({ message: "Transaction not found or already updated" });
+    if (result.modifiedCount > 0)
+      return res.redirect(`${frontendBaseUrl}/success/${tran_id}`);
+    res
+      .status(404)
+      .json({ message: "Transaction not found or already updated" });
   } catch {
     res.status(500).json({ message: "Server error in success route" });
   }
@@ -202,7 +253,9 @@ const paymentFail = async (req, res) => {
     const tran_id = req.params.tranId;
     await paymentsCollection.updateOne(
       { tran_id },
-      { $set: { status: "failed", failedAt: new Date(), updatedAt: new Date() } }
+      {
+        $set: { status: "failed", failedAt: new Date(), updatedAt: new Date() },
+      }
     );
     res.redirect(`${frontendBaseUrl}/fail/${tran_id}`);
   } catch {
@@ -216,7 +269,13 @@ const paymentCancel = async (req, res) => {
     const tran_id = req.params.tranId;
     await paymentsCollection.updateOne(
       { tran_id },
-      { $set: { status: "cancelled", cancelledAt: new Date(), updatedAt: new Date() } }
+      {
+        $set: {
+          status: "cancelled",
+          cancelledAt: new Date(),
+          updatedAt: new Date(),
+        },
+      }
     );
     res.redirect(`${frontendBaseUrl}/cancel/${tran_id}`);
   } catch {
@@ -233,7 +292,8 @@ const testPayment = async (req, res) => {
 const getPaymentDetails = async (req, res) => {
   try {
     const { tranId } = req.params;
-    if (!tranId) return res.status(400).json({ message: "Transaction ID is required" });
+    if (!tranId)
+      return res.status(400).json({ message: "Transaction ID is required" });
 
     const payment = await paymentsCollection.findOne({ tran_id: tranId });
     if (!payment) return res.status(404).json({ message: "Payment not found" });
@@ -259,7 +319,7 @@ const getUserPayments = async (req, res) => {
 
     // Build query
     const query = { "customer.email": userEmail };
-    if (status && status !== 'all') {
+    if (status && status !== "all") {
       query.status = status;
     }
 
@@ -281,11 +341,11 @@ const getUserPayments = async (req, res) => {
         currentPage: parseInt(page),
         totalPages: Math.ceil(totalCount / parseInt(limit)),
         totalCount,
-        limit: parseInt(limit)
-      }
+        limit: parseInt(limit),
+      },
     });
   } catch (error) {
-    console.error('Error fetching user payments:', error);
+    console.error("Error fetching user payments:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
@@ -294,21 +354,32 @@ const getUserPayments = async (req, res) => {
 const checkProducts = async (req, res) => {
   try {
     const { productIds } = req.body;
-    const objectIds = productIds.map(id => new ObjectId(id));
-    const products = await productsCollection.find({ _id: { $in: objectIds } }).toArray();
+    const objectIds = productIds.map((id) => new ObjectId(id));
+    const products = await productsCollection
+      .find({ _id: { $in: objectIds } })
+      .toArray();
 
     res.json({
       requested: productIds,
-      found: products.map(p => p._id.toString()),
-      missing: productIds.filter(id => !products.some(p => p._id.toString() === id)),
-      products: products.map(p => ({ id: p._id.toString(), name: p.name, price: p.price })),
+      found: products.map((p) => p._id.toString()),
+      missing: productIds.filter(
+        (id) => !products.some((p) => p._id.toString() === id)
+      ),
+      products: products.map((p) => ({
+        id: p._id.toString(),
+        name: p.name,
+        price: p.price,
+      })),
     });
   } catch (err) {
-    res.status(500).json({ message: "Error checking products", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Error checking products", error: err.message });
   }
 };
 
 module.exports = {
+  getPayments,
   createPayment,
   paymentSuccess,
   paymentFail,

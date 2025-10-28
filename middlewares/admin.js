@@ -1,4 +1,4 @@
-const usersCollections = require('../controllers/userControllers/userControllers');
+const {usersCollections} = require('../controllers/userControllers/userControllers');
 
 const verifyAdmin = async (req, res, next) => {
   try {
@@ -6,7 +6,7 @@ const verifyAdmin = async (req, res, next) => {
     if (!email) {
       return res.status(401).send({ message: "Unauthorized Access" });
     }
-    const user = await usersCollections.findOne({ email });
+    const user = await usersCollections.findOne({ email: email });
     if (!user) {
       return res.status(404).send({ message: "User not found" });
     }

@@ -13,7 +13,8 @@ const upload = multer({ storage: multer.memoryStorage() });
 userRouter.post("/auth/register", registerUser);
 
 //Get all users 
-userRouter.get("/", getAllUsers);
+userRouter.get("/", verifyToken, verifyAdmin, getAllUsers);
+// userRouter.get("/",getAllUsers);
 
 //Track Login
 userRouter.post("/auth/trackLogin", trackLogin);
