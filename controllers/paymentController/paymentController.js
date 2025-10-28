@@ -229,13 +229,28 @@ const testPayment = async (req, res) => {
   res.json({ message: "Test endpoint working", received: req.body });
 };
 
-// Get Payment Details
+// Get Payment Details by Transaction ID
 const getPaymentDetails = async (req, res) => {
   try {
     const { tranId } = req.params;
     if (!tranId) return res.status(400).json({ message: "Transaction ID is required" });
 
     const payment = await paymentsCollection.findOne({ tran_id: tranId });
+    if (!payment) return res.status(404).json({ message: "Payment not found" });
+
+    res.json(payment);
+  } catch {
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+// Get Payment Details by Order ID
+const getPaymentDetailsByOrderId = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    if (!orderId) return res.status(400).json({ message: "Order ID is required" });
+
+    const payment = await paymentsCollection.findOne({ order_id: orderId });
     if (!payment) return res.status(404).json({ message: "Payment not found" });
 
     res.json(payment);
@@ -315,6 +330,7 @@ module.exports = {
   paymentCancel,
   testPayment,
   getPaymentDetails,
+  getPaymentDetailsByOrderId,
   getUserPayments,
   checkProducts,
   paymentsCollection,

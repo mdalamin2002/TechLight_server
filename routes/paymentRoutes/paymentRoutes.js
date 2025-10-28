@@ -6,6 +6,7 @@ const {
     paymentCancel,
     testPayment,
     getPaymentDetails,
+    getPaymentDetailsByOrderId,
     getUserPayments,
     checkProducts,
 } = require('../../controllers/paymentController/paymentController');
@@ -25,6 +26,7 @@ paymentRouter.get("/cancel/:tranId", paymentCancel);
 paymentRouter.post("/cancel/:tranId", paymentCancel);
 
 paymentRouter.get("/details/:tranId", getPaymentDetails);
+paymentRouter.get("/details/order/:orderId", getPaymentDetailsByOrderId);
 
 // Get all payments for logged-in user
 paymentRouter.get("/user/orders", verifyToken, getUserPayments);
