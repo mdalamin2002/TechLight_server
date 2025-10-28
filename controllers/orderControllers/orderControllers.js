@@ -170,5 +170,6 @@ module.exports = {
   getAllOrders, 
   getUserOrders, 
   getUserOrderById, 
-  getUserOrderStats 
+  getUserOrderStats,
+  ordersCollection,
 };

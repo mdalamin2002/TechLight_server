@@ -1,4 +1,4 @@
-const usersCollections = require('../controllers/userControllers/userControllers');
+const { usersCollections } = require("../controllers/userControllers/userControllers");
 
 const verifyAdmin = async (req, res, next) => {
   try {

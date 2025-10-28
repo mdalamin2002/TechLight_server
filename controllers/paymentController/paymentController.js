@@ -317,4 +317,5 @@ module.exports = {
   getPaymentDetails,
   getUserPayments,
   checkProducts,
+  paymentsCollection,
 };

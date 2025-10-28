@@ -27,6 +27,7 @@ const rateLimit = require('express-rate-limit');
 const { errorHandler, notFoundHandler } = require('./middlewares/errorHandler');
 const aiRouter = require("./routes/aiRoutes/aiRoutes");
 const offersRouter = require("./routes/offersRoutes/offersRoutes");
+const userDashboardRouter = require("./routes/userDashboardOverview/userDashboardOverview");
 
 //middleware
 app.use(cors());
@@ -84,6 +85,9 @@ app.use("/api/banners", bannerRoute);
 // user support routes
 app.use("/api/support/user", userSupportRouter);
 app.use("/api/support/user/all", userSupportRouter);
+
+//user routes 
+app.use("/api/user/user_dashboard_overview", userDashboardRouter);
 
 // user order routes
 app.use("/api/user/orders", userOrderRouter);
