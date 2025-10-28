@@ -1,5 +1,5 @@
 const express = require('express');
-const { registerUser, loginUser, getAllUsers, updateUserRole, trackLogin, checkLock, updateUserProfile, userRole } = require('../../controllers/userControllers/userControllers');
+const { registerUser, loginUser, getAllUsers, updateUserRole, trackLogin, checkLock, userRole, updateUserProfile } = require('../../controllers/userControllers/userControllers');
 const { client } = require('../../config/mongoDB');
 const db = client.db('techLight');
 const usersCollections = db.collection('users');
@@ -15,7 +15,6 @@ userRouter.post("/auth/register", registerUser);
 //Get all users 
 userRouter.get("/", verifyToken, verifyAdmin, getAllUsers);
 // userRouter.get("/",getAllUsers);
-
 
 //Track Login
 userRouter.post("/auth/trackLogin", trackLogin);
