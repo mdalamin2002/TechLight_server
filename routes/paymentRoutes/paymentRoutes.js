@@ -1,5 +1,6 @@
 const express = require('express');
 const {
+    getPayments,
     createPayment,
     paymentSuccess,
     paymentFail,
@@ -17,6 +18,8 @@ paymentRouter.post("/order", createPayment);
 paymentRouter.post("/test", testPayment);
 paymentRouter.post("/check-products", checkProducts);
 
+//get all Payments
+paymentRouter.get("/", getPayments);
 paymentRouter.get("/success/:tranId", paymentSuccess);
 paymentRouter.post("/success/:tranId", paymentSuccess);
 paymentRouter.get("/fail/:tranId", paymentFail);
