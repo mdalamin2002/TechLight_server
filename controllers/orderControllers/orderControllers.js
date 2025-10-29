@@ -7,6 +7,29 @@ const ordersCollection = db.collection("orders");
 const createOrder = async (req, res, next) => {
   try {
     const orderData = req.body;
+    // Add timestamp
+    orderData.createdAt = new Date();
+    orderData.updatedAt = new Date();
+
+    // If products are included, ensure seller information is preserved
+    if (orderData.products && Array.isArray(orderData.products)) {
+      // Add seller information to each product if not already present
+      orderData.products = orderData.products.map(product => {
+        // Seller information should come from the product data
+        // This assumes products have been fetched with seller info
+        return {
+          ...product,
+          seller: product.seller || product.createdBy || null
+        };
+      });
+
+      // Extract unique sellers from products
+      orderData.sellers = orderData.products
+        .map(product => product.seller)
+        .filter((seller, index, self) =>
+          seller && self.findIndex(s => s && s.email === seller.email) === index);
+    }
+
     const result = await ordersCollection.insertOne(orderData);
     res.status(201).send(result);
   } catch (error) {
@@ -28,11 +51,11 @@ const getAllOrders = async (req, res, next) => {
 const getUserOrders = async (req, res, next) => {
   try {
     const userEmail = req.decoded; // From auth middleware
-    const { 
-      page = 1, 
-      limit = 10, 
-      status, 
-      startDate, 
+    const {
+      page = 1,
+      limit = 10,
+      status,
+      startDate,
       endDate,
       sortBy = 'createdAt',
       sortOrder = 'desc'
@@ -40,11 +63,11 @@ const getUserOrders = async (req, res, next) => {
 
     // Build query filter
     const filter = { userEmail };
-    
+
     if (status) {
       filter.status = status;
     }
-    
+
     if (startDate || endDate) {
       filter.createdAt = {};
       if (startDate) filter.createdAt.$gte = new Date(startDate);
@@ -148,7 +171,7 @@ const getUserOrderStats = async (req, res, next) => {
     ];
 
     const stats = await ordersCollection.aggregate(pipeline).toArray();
-    
+
     res.status(200).json({
       success: true,
       data: stats[0] || {
@@ -165,10 +188,10 @@ const getUserOrderStats = async (req, res, next) => {
   }
 };
 
-module.exports = { 
-  createOrder, 
-  getAllOrders, 
-  getUserOrders, 
-  getUserOrderById, 
-  getUserOrderStats 
+module.exports = {
+  createOrder,
+  getAllOrders,
+  getUserOrders,
+  getUserOrderById,
+  getUserOrderStats
 };

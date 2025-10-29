@@ -89,13 +89,12 @@ const createPayment = async (req, res) => {
     }
 
     const products = await productsCollection
-      .find({ _id: { $in: productIds } })
+      .find({ _id: { $in: productIds }, status: "approved" }) // Only process approved products
       .toArray();
 
     if (!products.length) {
       return res.status(404).json({
-        message: "Products not found",
-        requestedIds: productIds.map((id) => id.toString()),
+        message: "Products not found or not approved",
       });
     }
 
@@ -190,13 +189,17 @@ const createPayment = async (req, res) => {
     const paymentDoc = {
       order_id,
       tran_id,
-      products: cart.map((item) => ({
-        productId: item.productId,
-        quantity: item.quantity || 1,
-        price:
-          products.find((p) => p._id.toString() === item.productId)?.price || 0,
-        name: item.name,
-      })),
+      products: cart.map((item) => {
+        const product = products.find((p) => p._id.toString() === item.productId);
+        return {
+          productId: item.productId,
+          quantity: item.quantity || 1,
+          price: product?.price || 0,
+          name: item.name,
+          // Include seller information
+          seller: product?.createdBy || null
+        };
+      }),
       customer,
       status: "pending",
       paidStatus: false,
@@ -224,17 +227,31 @@ const createPayment = async (req, res) => {
 const paymentSuccess = async (req, res) => {
   try {
     const tran_id = req.params.tranId;
+
+    // Get the payment record to access seller information
+    const paymentRecord = await paymentsCollection.findOne({ tran_id });
+
+    const updateData = {
+      paidStatus: true,
+      status: "success",
+      verified: true,
+      paidAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    // If we have seller information, we can use it for notifications or other purposes
+    if (paymentRecord && paymentRecord.products) {
+      // Seller information is already stored in the products array
+      // This can be used for sending notifications to sellers
+      updateData.sellers = paymentRecord.products
+        .map(product => product.seller)
+        .filter((seller, index, self) =>
+          seller && self.findIndex(s => s && s.email === seller.email) === index);
+    }
+
     const result = await paymentsCollection.updateOne(
       { tran_id },
-      {
-        $set: {
-          paidStatus: true,
-          status: "success",
-          verified: true,
-          paidAt: new Date(),
-          updatedAt: new Date(),
-        },
-      }
+      { $set: updateData }
     );
 
     if (result.modifiedCount > 0)
@@ -251,11 +268,24 @@ const paymentSuccess = async (req, res) => {
 const paymentFail = async (req, res) => {
   try {
     const tran_id = req.params.tranId;
+
+    // Get the payment record to access seller information
+    const paymentRecord = await paymentsCollection.findOne({ tran_id });
+
+    const updateData = {
+      status: "failed",
+      failedAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    // Preserve seller information if it exists
+    if (paymentRecord && paymentRecord.sellers) {
+      updateData.sellers = paymentRecord.sellers;
+    }
+
     await paymentsCollection.updateOne(
       { tran_id },
-      {
-        $set: { status: "failed", failedAt: new Date(), updatedAt: new Date() },
-      }
+      { $set: updateData }
     );
     res.redirect(`${frontendBaseUrl}/fail/${tran_id}`);
   } catch {
@@ -267,15 +297,24 @@ const paymentFail = async (req, res) => {
 const paymentCancel = async (req, res) => {
   try {
     const tran_id = req.params.tranId;
+
+    // Get the payment record to access seller information
+    const paymentRecord = await paymentsCollection.findOne({ tran_id });
+
+    const updateData = {
+      status: "cancelled",
+      cancelledAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    // Preserve seller information if it exists
+    if (paymentRecord && paymentRecord.sellers) {
+      updateData.sellers = paymentRecord.sellers;
+    }
+
     await paymentsCollection.updateOne(
       { tran_id },
-      {
-        $set: {
-          status: "cancelled",
-          cancelledAt: new Date(),
-          updatedAt: new Date(),
-        },
-      }
+      { $set: updateData }
     );
     res.redirect(`${frontendBaseUrl}/cancel/${tran_id}`);
   } catch {
@@ -356,7 +395,7 @@ const checkProducts = async (req, res) => {
     const { productIds } = req.body;
     const objectIds = productIds.map((id) => new ObjectId(id));
     const products = await productsCollection
-      .find({ _id: { $in: objectIds } })
+      .find({ _id: { $in: objectIds }, status: "approved" }) // Only check approved products
       .toArray();
 
     res.json({

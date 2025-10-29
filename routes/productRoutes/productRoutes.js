@@ -7,7 +7,7 @@ const { increaseStock, decreaseStock } = require('../../controllers/productContr
 const productRouter = express.Router();
 
 //Create Product
-productRouter.post("/", verifyToken,verifyAdmin,createProduct);
+productRouter.post("/", verifyToken, createProduct);
 
 //Search products (must come before other GET routes to avoid conflicts)
 productRouter.get("/search", searchProducts);

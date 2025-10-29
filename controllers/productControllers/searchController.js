@@ -18,7 +18,7 @@ const searchProducts = async (req, res, next) => {
   try {
     const searchQuery = req.query.q?.trim();
     const categoryFilter = req.query.category?.trim();
-    
+
     if (!searchQuery && !categoryFilter) {
       return res.status(200).send({
         data: [],
@@ -37,10 +37,10 @@ const searchProducts = async (req, res, next) => {
     // Build search filter with multiple field matching
     const searchRegex = searchQuery ? new RegExp(searchQuery, "i") : null;
     const categoryRegex = categoryFilter ? new RegExp(categoryFilter, "i") : null;
-    
+
     // Build dynamic search filter
     const searchFilter = {
-      status: { $ne: "inactive" },
+      status: "approved", // Only show approved products
     };
 
     // If category filter is specified, prioritize it
@@ -53,7 +53,7 @@ const searchProducts = async (req, res, next) => {
           ],
         },
       ];
-      
+
       // If search query also provided, add it to the filter
       if (searchRegex) {
         searchFilter.$and.push({
@@ -161,7 +161,7 @@ const searchProducts = async (req, res, next) => {
 const getSearchSuggestions = async (req, res, next) => {
   try {
     const searchQuery = req.query.q?.trim();
-    
+
     if (!searchQuery || searchQuery.length < 2) {
       return res.status(200).send({ suggestions: [] });
     }
@@ -169,10 +169,10 @@ const getSearchSuggestions = async (req, res, next) => {
     const limit = Math.min(parseInt(req.query.limit || "5", 10), 10);
     const searchRegex = new RegExp(searchQuery, "i");
 
-    // Get unique suggestions from product names and brands
+    // Get unique suggestions from product names and brands - ONLY APPROVED PRODUCTS
     const products = await productsCollection
       .find({
-        status: { $ne: "inactive" },
+        status: "approved", // Only show approved products
         $or: [
           { name: searchRegex },
           { brand: searchRegex },
@@ -232,7 +232,7 @@ const createSearchIndex = async () => {
 const getCategoriesWithCount = async (req, res, next) => {
   try {
     const categories = await productsCollection.aggregate([
-      { $match: { status: { $ne: "inactive" } } },
+      { $match: { status: "approved" } }, // Only count approved products
       {
         $group: {
           _id: "$category",
