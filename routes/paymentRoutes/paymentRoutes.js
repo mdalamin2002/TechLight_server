@@ -14,7 +14,7 @@ const verifyToken = require('../../middlewares/auth');
 
 const paymentRouter = express.Router();
 
-paymentRouter.post("/order", createPayment);
+paymentRouter.post("/order", verifyToken, createPayment);
 paymentRouter.post("/test", testPayment);
 paymentRouter.post("/check-products", checkProducts);
 
