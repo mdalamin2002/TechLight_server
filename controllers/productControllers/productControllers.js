@@ -15,7 +15,12 @@ const createProduct = async (req, res, next) => {
     productData.created_at = new Date();
     productData.updated_at = new Date();
     // Associate product with the user who created it
-    productData.createdBy = req.decoded; // This is the user's email from auth middleware
+    productData.createdBy = {
+      email: req.decoded, // This is the user's email from auth middleware
+      uid: req.user?.uid,
+      name: req.user?.displayName || 'Unknown Seller',
+      photoURL: req.user?.photoURL || null
+    };
     const result = await productsCollection.insertOne(productData);
     res.status(201).send(result);
   } catch (error) {
@@ -186,6 +191,8 @@ const updateProduct = async (req, res, next) => {
     }
     updateData.updated_at = new Date();
     updateData.created_at = existingProduct.created_at;
+    // Preserve seller information
+    updateData.createdBy = existingProduct.createdBy;
     if (!updateData.status) {
       updateData.status = existingProduct.status;
     }
