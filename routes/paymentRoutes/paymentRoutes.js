@@ -22,7 +22,7 @@ paymentRouter.post("/test", testPayment);
 paymentRouter.post("/check-products", checkProducts);
 
 //get all Payments
-paymentRouter.get("/", getPayments);
+paymentRouter.get("/", verifyToken, verifyAdmin,getPayments);
 paymentRouter.get("/success/:tranId", paymentSuccess);
 paymentRouter.post("/success/:tranId", paymentSuccess);
 paymentRouter.get("/fail/:tranId", paymentFail);
