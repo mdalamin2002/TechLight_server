@@ -6,6 +6,12 @@ const db = client.db("techLight");
 const moderatorOrdersCollections = db.collection("moderator_orders");
 const moderatorProductsCollections = db.collection("moderator_products");
 const moderatorInventoryAlerts = db.collection("moderator_inventory-alerts");
+
+const {
+  getModeratorDashboardStats: fetchModeratorDashboardStats,
+  getModeratorRecentActivities: fetchModeratorRecentActivities,
+  getOrderProcessingProgress: fetchOrderProcessingProgress
+} = require("./moderatorDashboardController");
 // GET all orders
 const getOrders = async (req, res, next) => {
   try {
@@ -85,10 +91,43 @@ const getInventoryAlerts = async (req, res, next) => {
   }
 };
 
+// GET moderator dashboard statistics
+const handleGetModeratorDashboardStats = async (req, res, next) => {
+  try {
+    const stats = await fetchModeratorDashboardStats();
+    res.status(200).json(stats);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// GET recent activities for moderator dashboard
+const handleGetModeratorRecentActivities = async (req, res, next) => {
+  try {
+    const activities = await fetchModeratorRecentActivities();
+    res.status(200).json(activities);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// GET order processing progress
+const handleGetOrderProcessingProgress = async (req, res, next) => {
+  try {
+    const progressData = await fetchOrderProcessingProgress();
+    res.status(200).json(progressData);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getOrders,
   updateOrderStatus,
   getProducts,
   updateProductStatus,
-  getInventoryAlerts
+  getInventoryAlerts,
+  handleGetModeratorDashboardStats,
+  handleGetModeratorRecentActivities,
+  handleGetOrderProcessingProgress
 };

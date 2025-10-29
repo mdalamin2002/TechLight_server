@@ -4,7 +4,10 @@ const {
   updateOrderStatus,
   getProducts,
   updateProductStatus,
-  getInventoryAlerts
+  getInventoryAlerts,
+  handleGetModeratorDashboardStats,
+  handleGetModeratorRecentActivities,
+  handleGetOrderProcessingProgress
 } = require("../../controllers/ordersProductController/ordersProductController");
 const verifyToken = require("../../middlewares/auth");
 
@@ -22,5 +25,10 @@ ordersProductRouter.patch("/products/:id/status",verifyToken,updateProductStatus
 
 //Get all inventory
 ordersProductRouter.get("/inventory-alerts",verifyToken, getInventoryAlerts);
+
+// Moderator Dashboard endpoints
+ordersProductRouter.get("/dashboard/stats", verifyToken, handleGetModeratorDashboardStats);
+ordersProductRouter.get("/dashboard/activities", verifyToken, handleGetModeratorRecentActivities);
+ordersProductRouter.get("/dashboard/progress", verifyToken, handleGetOrderProcessingProgress);
 
 module.exports = ordersProductRouter;
