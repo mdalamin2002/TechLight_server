@@ -417,6 +417,126 @@ const checkProducts = async (req, res) => {
   }
 };
 
+// Get all payments for admin with filters and pagination
+const getAllPayments = async (req, res) => {
+  try {
+    const { status, page = 1, limit = 10, startDate, endDate } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Build query
+    const query = {};
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) query.createdAt.$lte = new Date(endDate);
+    }
+
+    // Fetch payments with pagination
+    const payments = await paymentsCollection
+      .find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .toArray();
+
+    // Get total count for pagination
+    const totalCount = await paymentsCollection.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: payments,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(totalCount / parseInt(limit)),
+        totalCount,
+        limit: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching all payments:', error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+// Get payment statistics for admin dashboard
+const getPaymentStats = async (req, res) => {
+  try {
+    const { period = '30' } = req.query; // days
+    const daysAgo = new Date();
+    daysAgo.setDate(daysAgo.getDate() - parseInt(period));
+
+    // Total revenue (successful payments)
+    const revenueResult = await paymentsCollection.aggregate([
+      { $match: { status: 'success', paidStatus: true } },
+      { $group: { _id: null, total: { $sum: '$total_amount' } } }
+    ]).toArray();
+    const totalRevenue = revenueResult[0]?.total || 0;
+
+    // Total transactions
+    const totalTransactions = await paymentsCollection.countDocuments();
+
+    // Successful transactions
+    const successfulTransactions = await paymentsCollection.countDocuments({ status: 'success' });
+
+    // Failed transactions
+    const failedTransactions = await paymentsCollection.countDocuments({ status: 'failed' });
+
+    // Pending transactions
+    const pendingTransactions = await paymentsCollection.countDocuments({ status: 'pending' });
+
+    // Recent period revenue
+    const recentRevenueResult = await paymentsCollection.aggregate([
+      { $match: { status: 'success', paidStatus: true, createdAt: { $gte: daysAgo } } },
+      { $group: { _id: null, total: { $sum: '$total_amount' } } }
+    ]).toArray();
+    const recentRevenue = recentRevenueResult[0]?.total || 0;
+
+    // Previous period revenue for comparison
+    const previousPeriodStart = new Date(daysAgo);
+    previousPeriodStart.setDate(previousPeriodStart.getDate() - parseInt(period));
+    const previousRevenueResult = await paymentsCollection.aggregate([
+      { $match: { status: 'success', paidStatus: true, createdAt: { $gte: previousPeriodStart, $lt: daysAgo } } },
+      { $group: { _id: null, total: { $sum: '$total_amount' } } }
+    ]).toArray();
+    const previousRevenue = previousRevenueResult[0]?.total || 0;
+
+    // Calculate revenue growth percentage
+    const revenueGrowth = previousRevenue > 0 
+      ? (((recentRevenue - previousRevenue) / previousRevenue) * 100).toFixed(1)
+      : 100;
+
+    // Recent transactions count
+    const recentTransactions = await paymentsCollection.countDocuments({ createdAt: { $gte: daysAgo } });
+    const previousTransactions = await paymentsCollection.countDocuments({ 
+      createdAt: { $gte: previousPeriodStart, $lt: daysAgo } 
+    });
+    const transactionGrowth = previousTransactions > 0
+      ? (((recentTransactions - previousTransactions) / previousTransactions) * 100).toFixed(1)
+      : 100;
+
+    res.json({
+      success: true,
+      stats: {
+        totalRevenue,
+        totalTransactions,
+        successfulTransactions,
+        failedTransactions,
+        pendingTransactions,
+        recentRevenue,
+        revenueGrowth: parseFloat(revenueGrowth),
+        transactionGrowth: parseFloat(transactionGrowth),
+        period: parseInt(period)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching payment stats:', error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
 module.exports = {
   getPayments,
   createPayment,
@@ -427,4 +547,6 @@ module.exports = {
   getPaymentDetails,
   getUserPayments,
   checkProducts,
+  getAllPayments,
+  getPaymentStats,
 };
