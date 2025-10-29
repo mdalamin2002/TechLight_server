@@ -89,13 +89,12 @@ const createPayment = async (req, res) => {
     }
 
     const products = await productsCollection
-      .find({ _id: { $in: productIds } })
+      .find({ _id: { $in: productIds }, status: "approved" }) // Only process approved products
       .toArray();
 
     if (!products.length) {
       return res.status(404).json({
-        message: "Products not found",
-        requestedIds: productIds.map((id) => id.toString()),
+        message: "Products not found or not approved",
       });
     }
 
@@ -356,7 +355,7 @@ const checkProducts = async (req, res) => {
     const { productIds } = req.body;
     const objectIds = productIds.map((id) => new ObjectId(id));
     const products = await productsCollection
-      .find({ _id: { $in: objectIds } })
+      .find({ _id: { $in: objectIds }, status: "approved" }) // Only check approved products
       .toArray();
 
     res.json({

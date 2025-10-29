@@ -303,10 +303,10 @@ const getAllApprovedReviews = async (req, res, next) => {
 
     console.log("Found reviews:", reviews.length);
 
-    // Get product details for each review
+    // Get product details for each review - ONLY APPROVED PRODUCTS
     const productIds = reviews.map(review => review.productId);
     const products = await productsCollection
-      .find({ _id: { $in: productIds } })
+      .find({ _id: { $in: productIds }, status: "approved" })
       .toArray();
 
     // Create a map of products for quick lookup

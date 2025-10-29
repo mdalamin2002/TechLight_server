@@ -30,8 +30,8 @@ const getAllProducts = async (req, res, next) => {
     const returnAll = req.query.all === 'true';
 
     if (returnAll) {
-      // Return all products without pagination
-      const filter = { status: { $ne: "inactive" } };
+      // Return all products without pagination - ONLY APPROVED PRODUCTS
+      const filter = { status: "approved" };
       const items = await productsCollection.find(filter).toArray();
 
       // Add dynamic ratings to all products
@@ -76,12 +76,12 @@ const getAllProducts = async (req, res, next) => {
 
       res.status(200).send({ data: items, total: items.length });
     } else {
-      // Original pagination logic
+      // Original pagination logic - ONLY APPROVED PRODUCTS
       const page = Math.max(parseInt(req.query.page || '1', 10), 1);
       const limit = Math.min(Math.max(parseInt(req.query.limit || '20', 10), 1), 100);
       const skip = (page - 1) * limit;
 
-      const filter = { status: { $ne: "inactive" } };
+      const filter = { status: "approved" };
       const [items, total] = await Promise.all([
         productsCollection
           .find(filter)
@@ -221,7 +221,7 @@ const deleteProduct = async (req, res, next) => {
 const getProductsByCategory = async (req, res, next) => {
   const { category, subCategory } = req.params;
   try {
-    const result = await productsCollection.find({ category, subCategory, status: { $ne: 'inactive' } }).toArray();
+    const result = await productsCollection.find({ category, subCategory, status: "approved" }).toArray();
 
     // Add dynamic ratings to products in this category
     if (result.length > 0) {
@@ -273,7 +273,7 @@ const getProductsByCategory = async (req, res, next) => {
 const getProductsByOnlyCategory = async (req, res, next) => {
   const { category } = req.params;
   try {
-    const result = await productsCollection.find({ category:category, status: { $ne: 'inactive' } }).toArray();
+    const result = await productsCollection.find({ category:category, status: "approved" }).toArray();
 
     // Add dynamic ratings to products in this category
     if (result.length > 0) {
@@ -361,10 +361,10 @@ const getTopSellingProducts = async (req, res, next) => {
       .sort((a, b) => b.totalQuantitySold - a.totalQuantitySold)
       .slice(0, limit);
 
-    // Get product details for the top selling products
+    // Get product details for the top selling products - ONLY APPROVED PRODUCTS
     const productIds = salesArray.map(item => new ObjectId(item.productId));
     const products = await productsCollection
-      .find({ _id: { $in: productIds } })
+      .find({ _id: { $in: productIds }, status: "approved" })
       .toArray();
 
     // Combine sales data with product details
@@ -427,9 +427,9 @@ const getHighRatedProducts = async (req, res, next) => {
   try {
     const limit = parseInt(req.query.limit) || 4; // Default to 4 products
 
-    // Get all products with status active
+    // Get all products with status approved
     const products = await productsCollection
-      .find({ status: { $ne: "inactive" } })
+      .find({ status: "approved" })
       .toArray();
 
     // Add dynamic ratings to all products
@@ -489,10 +489,10 @@ const getDiscountedProducts = async (req, res, next) => {
   try {
     const limit = parseInt(req.query.limit) || 4; // Default to 4 products
 
-    // Get products where regularPrice > price (indicating a discount)
+    // Get products where regularPrice > price (indicating a discount) - ONLY APPROVED PRODUCTS
     const products = await productsCollection
       .find({
-        status: { $ne: "inactive" },
+        status: "approved",
         $expr: { $gt: ["$regularPrice", "$price"] }
       })
       .toArray();
@@ -557,10 +557,10 @@ const getSelectedProducts = async (req, res, next) => {
   try {
     const limit = parseInt(req.query.limit) || 4; // Default to 4 products
 
-    // Get products marked as featured or selected
+    // Get products marked as featured or selected - ONLY APPROVED PRODUCTS
     const products = await productsCollection
       .find({
-        status: { $ne: "inactive" },
+        status: "approved",
         $or: [
           { isFeatured: true },
           { isSelected: true },
@@ -570,12 +570,12 @@ const getSelectedProducts = async (req, res, next) => {
       })
       .toArray();
 
-    // If no featured products found, get some random products
+    // If no featured products found, get some random products - ONLY APPROVED PRODUCTS
     let selectedProducts = products;
     if (selectedProducts.length === 0) {
       selectedProducts = await productsCollection
         .aggregate([
-          { $match: { status: { $ne: "inactive" } } },
+          { $match: { status: "approved" } },
           { $sample: { size: limit } }
         ])
         .toArray();
