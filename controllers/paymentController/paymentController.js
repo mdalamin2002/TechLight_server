@@ -729,58 +729,108 @@ const getSellerDashboardOverview = async (req, res) => {
 const getSellerSalesAnalytics = async (req, res) => {
   try {
     const sellerEmail = req.user?.email; // From verifyToken middleware
+    const { period = '7' } = req.query; // Default to 7 days
 
     if (!sellerEmail) {
       return res.status(401).json({ message: "Seller email not found" });
     }
 
-    // Get the last 7 months of data
+    // Determine date range based on period
     const now = new Date();
-    const months = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthName = d.toLocaleString("default", { month: "short" });
-      months.push({
-        date: d,
-        name: monthName,
-        year: d.getFullYear()
-      });
+    let startDate;
+    
+    switch (period) {
+      case '7':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+        break;
+      case '30':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
+        break;
+      case '365':
+        startDate = new Date(now.getFullYear(), now.getMonth() - 12, now.getDate());
+        break;
+      default:
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
     }
 
-    // Get sales data for each month
-    const chartData = [];
-    for (const month of months) {
-      const startDate = new Date(month.date.getFullYear(), month.date.getMonth(), 1);
-      const endDate = new Date(month.date.getFullYear(), month.date.getMonth() + 1, 1);
-      
-      // Get payments for this month
-      const payments = await paymentsCollection.find({
-        "products.seller.email": sellerEmail,
-        status: "success",
-        paidStatus: true,
-        createdAt: {
-          $gte: startDate,
-          $lt: endDate
-        }
-      }).toArray();
-      
-      // Calculate total sales and orders for this month
-      let totalSales = 0;
-      let totalOrders = payments.length;
-      
-      payments.forEach(payment => {
-        payment.products.forEach(product => {
-          if (product.seller.email === sellerEmail) {
-            totalSales += product.price * product.quantity;
+    // For daily data in the selected period
+    const dailyData = [];
+    const daysToShow = period === '7' ? 7 : period === '30' ? 30 : 12; // 12 months for yearly
+    
+    if (period === '7' || period === '30') {
+      // Daily data for 7 or 30 days
+      for (let i = daysToShow - 1; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        date.setHours(0, 0, 0, 0);
+        
+        const endDate = new Date(date);
+        endDate.setDate(endDate.getDate() + 1);
+        
+        // Get payments for this day
+        const payments = await paymentsCollection.find({
+          "products.seller.email": sellerEmail,
+          status: "success",
+          paidStatus: true,
+          createdAt: {
+            $gte: date,
+            $lt: endDate
           }
+        }).toArray();
+        
+        // Calculate total sales and orders for this day
+        let totalSales = 0;
+        let totalOrders = payments.length;
+        
+        payments.forEach(payment => {
+          payment.products.forEach(product => {
+            if (product.seller.email === sellerEmail) {
+              totalSales += product.price * product.quantity;
+            }
+          });
         });
-      });
-      
-      chartData.push({
-        month: month.name,
-        sales: totalSales,
-        orders: totalOrders
-      });
+        
+        dailyData.push({
+          date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          sales: totalSales,
+          orders: totalOrders
+        });
+      }
+    } else {
+      // Monthly data for 1 year
+      for (let i = 11; i >= 0; i--) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const endDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+        
+        // Get payments for this month
+        const payments = await paymentsCollection.find({
+          "products.seller.email": sellerEmail,
+          status: "success",
+          paidStatus: true,
+          createdAt: {
+            $gte: date,
+            $lt: endDate
+          }
+        }).toArray();
+        
+        // Calculate total sales and orders for this month
+        let totalSales = 0;
+        let totalOrders = payments.length;
+        
+        payments.forEach(payment => {
+          payment.products.forEach(product => {
+            if (product.seller.email === sellerEmail) {
+              totalSales += product.price * product.quantity;
+            }
+          });
+        });
+        
+        dailyData.push({
+          date: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          sales: totalSales,
+          orders: totalOrders
+        });
+      }
     }
 
     // Get recent orders (last 5)
@@ -823,8 +873,9 @@ const getSellerSalesAnalytics = async (req, res) => {
     res.json({
       success: true,
       data: {
-        chartData,
-        recentOrders
+        chartData: dailyData,
+        recentOrders,
+        period
       }
     });
   } catch (error) {
