@@ -1,6 +1,7 @@
 const express = require('express');
 const {
     getPayments,
+    updatePaymentStatus,
     createPayment,
     paymentSuccess,
     paymentFail,
@@ -38,5 +39,6 @@ paymentRouter.get("/user/orders", verifyToken, getUserPayments);
 // Admin routes
 paymentRouter.get("/admin/all", verifyToken, verifyAdmin, getAllPayments);
 paymentRouter.get("/admin/stats", verifyToken, verifyAdmin, getPaymentStats);
+paymentRouter.patch("/admin/:paymentId/status", verifyToken, verifyAdmin, updatePaymentStatus);
 
 module.exports = paymentRouter;
