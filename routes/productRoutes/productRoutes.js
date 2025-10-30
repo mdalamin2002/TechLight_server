@@ -25,10 +25,10 @@ productRouter.get("/categories/list", getCategoriesWithCount);
 productRouter.get("/", getAllProducts);
 
 //Get All Products for Admin (all statuses)
-productRouter.get("/admin/all", verifyToken, verifyAdmin, getAllProductsForAdmin);
+productRouter.get("/admin/all", verifyToken,  getAllProductsForAdmin);
 
 //Update Product Status (admin only)
-productRouter.patch("/status/:id", verifyToken, verifyAdmin, updateProductStatus);
+productRouter.patch("/status/:id", verifyToken, updateProductStatus);
 
 //Get top selling products
 productRouter.get("/top-selling", getTopSellingProducts);

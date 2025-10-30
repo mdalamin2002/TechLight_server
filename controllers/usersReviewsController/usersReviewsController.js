@@ -86,19 +86,27 @@ const getReviews = async (req, res, next) => {
   }
 };
 
-// PATCH: Approve a review
-const approveReview = async (req, res, next) => {
+// PATCH: Update a review status (approve, pending, reject)
+const updateReviewStatus = async (req, res, next) => {
   try {
     const id = req.params.id;
+    const { status } = req.body;
+
+    // Validate status
+    const validStatuses = ["Approved", "Pending", "Rejected"];
+    if (!validStatuses.includes(status)) {
+      return next(createError(400, "Invalid status value"));
+    }
+
     const result = await moderatorUsersReviewsCollections.updateOne(
       { _id: new ObjectId(id) },
-      { $set: { status: "Approved" } }
+      { $set: { status } }
     );
 
     if (result.modifiedCount === 0)
       return next(createError(404, "Review not found"));
 
-    res.status(200).json({ message: "Review approved successfully." });
+    res.status(200).json({ message: `Review ${status} successfully.` });
   } catch (error) {
     next(error);
   }
@@ -125,6 +133,6 @@ module.exports = {
   tempBanUser,
   verifyReport,
   getReviews,
-  approveReview,
+  updateReviewStatus, // Updated to use the new function
   deleteReview
 };
