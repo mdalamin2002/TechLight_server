@@ -224,6 +224,29 @@ const deleteProduct = async (req, res, next) => {
   }
 };
 
+// Hard delete product (permanently remove from database)
+const hardDeleteProduct = async (req, res, next) => {
+  try {
+    const productId = req.params.id;
+    if (!ObjectId.isValid(productId)) {
+      return next(createError(400, 'Invalid product id'));
+    }
+    const query = { _id: new ObjectId(productId) };
+    const result = await productsCollection.deleteOne(query);
+
+    if (result.deletedCount === 0) {
+      return next(createError(404, 'Product not found'));
+    }
+
+    res.status(200).send({
+      message: "Product permanently deleted",
+      result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 //Get Product Data category and subcategory wise
 const getProductsByCategory = async (req, res, next) => {
   const { category, subCategory } = req.params;
@@ -637,13 +660,172 @@ const getSelectedProducts = async (req, res, next) => {
   }
 };
 
+//Get All Products for Admin (including pending, approved, rejected)
+const getAllProductsForAdmin = async (req, res, next) => {
+  try {
+    // Check if all products should be returned (no pagination)
+    const returnAll = req.query.all === 'true';
+
+    if (returnAll) {
+      // Return all products without pagination - ALL PRODUCTS (no status filter)
+      const filter = {};
+      const items = await productsCollection.find(filter).toArray();
+
+      // Add dynamic ratings to all products
+      if (items.length > 0) {
+        // Get all product IDs
+        const productIds = items.map(item => item._id);
+
+        // Get reviews for all these products
+        const reviews = await productReviewsCollection
+          .find({
+            productId: { $in: productIds },
+            status: "approved"
+          })
+          .toArray();
+
+        // Group reviews by product ID
+        const reviewsByProduct = {};
+        reviews.forEach(review => {
+          const productId = review.productId.toString();
+          if (!reviewsByProduct[productId]) {
+            reviewsByProduct[productId] = [];
+          }
+          reviewsByProduct[productId].push(review);
+        });
+
+        // Calculate dynamic ratings for each product
+        items.forEach(item => {
+          const productId = item._id.toString();
+          const productReviews = reviewsByProduct[productId] || [];
+
+          if (productReviews.length > 0) {
+            // Calculate average rating
+            const totalRating = productReviews.reduce((sum, review) => sum + review.rating, 0);
+            const averageRating = totalRating / productReviews.length;
+
+            // Add dynamic rating and total reviews to product data
+            item.rating = parseFloat(averageRating.toFixed(1));
+            item.totalReviews = productReviews.length;
+          }
+        });
+      }
+
+      res.status(200).send({ data: items, total: items.length });
+    } else {
+      // Original pagination logic - ALL PRODUCTS (no status filter)
+      const page = Math.max(parseInt(req.query.page || '1', 10), 1);
+      const limit = Math.min(Math.max(parseInt(req.query.limit || '20', 10), 1), 100);
+      const skip = (page - 1) * limit;
+
+      // For admin, we don't filter by status - show all products
+      const filter = {};
+
+      const [items, total] = await Promise.all([
+        productsCollection
+          .find(filter)
+          .skip(skip)
+          .limit(limit)
+          .toArray(),
+        productsCollection.countDocuments(filter),
+      ]);
+
+      // Add dynamic ratings to all products
+      if (items.length > 0) {
+        // Get all product IDs
+        const productIds = items.map(item => item._id);
+
+        // Get reviews for all these products
+        const reviews = await productReviewsCollection
+          .find({
+            productId: { $in: productIds },
+            status: "approved"
+          })
+          .toArray();
+
+        // Group reviews by product ID
+        const reviewsByProduct = {};
+        reviews.forEach(review => {
+          const productId = review.productId.toString();
+          if (!reviewsByProduct[productId]) {
+            reviewsByProduct[productId] = [];
+          }
+          reviewsByProduct[productId].push(review);
+        });
+
+        // Calculate dynamic ratings for each product
+        items.forEach(item => {
+          const productId = item._id.toString();
+          const productReviews = reviewsByProduct[productId] || [];
+
+          if (productReviews.length > 0) {
+            // Calculate average rating
+            const totalRating = productReviews.reduce((sum, review) => sum + review.rating, 0);
+            const averageRating = totalRating / productReviews.length;
+
+            // Add dynamic rating and total reviews to product data
+            item.rating = parseFloat(averageRating.toFixed(1));
+            item.totalReviews = productReviews.length;
+          }
+        });
+      }
+
+      res.status(200).send({ data: items, page, limit, total });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+//Update Product Status (for admin)
+const updateProductStatus = async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    if (!ObjectId.isValid(id)) {
+      return next(createError(400, 'Invalid product id'));
+    }
+
+    const { status } = req.body;
+
+    // Validate status
+    const validStatuses = ['pending', 'approved', 'rejected'];
+    if (!validStatuses.includes(status)) {
+      return next(createError(400, 'Invalid status value'));
+    }
+
+    const updateData = {
+      status,
+      updated_at: new Date()
+    };
+
+    const result = await productsCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updateData }
+    );
+
+    if (result.matchedCount === 0) {
+      return next(createError(404, 'Product not found'));
+    }
+
+    res.status(200).send({
+      message: "Product status updated successfully",
+      result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createProduct,
   getProductsByCategory,
   getAllProducts,
+  getAllProductsForAdmin, // Add this export
   deleteProduct,
+  hardDeleteProduct, // Add this export
   getSingleProduct,
   updateProduct,
+  updateProductStatus, // Add this export
   productsCollection,
   getProductsByOnlyCategory,
   getTopSellingProducts,

@@ -1,5 +1,5 @@
 const express = require('express');
-const { createProduct, getProductsByCategory,getAllProducts, deleteProduct, getSingleProduct, updateProduct, getProductsByOnlyCategory, getTopSellingProducts, getHighRatedProducts, getDiscountedProducts, getSelectedProducts} = require('../../controllers/productControllers/productControllers');
+const { createProduct, getProductsByCategory,getAllProducts, getAllProductsForAdmin, deleteProduct, hardDeleteProduct, getSingleProduct, updateProduct, updateProductStatus, getProductsByOnlyCategory, getTopSellingProducts, getHighRatedProducts, getDiscountedProducts, getSelectedProducts} = require('../../controllers/productControllers/productControllers');
 const { searchProducts, getSearchSuggestions, getCategoriesWithCount } = require('../../controllers/productControllers/searchController');
 const verifyToken = require('../../middlewares/auth');
 const verifyAdmin = require('../../middlewares/admin');
@@ -18,8 +18,14 @@ productRouter.get("/search/suggestions", getSearchSuggestions);
 //Get categories with product counts (for voice navigation)
 productRouter.get("/categories/list", getCategoriesWithCount);
 
-//Get All Product (public list)
+//Get All Product (public list - only approved)
 productRouter.get("/", getAllProducts);
+
+//Get All Products for Admin (all statuses)
+productRouter.get("/admin/all", verifyToken, verifyAdmin, getAllProductsForAdmin);
+
+//Update Product Status (admin only)
+productRouter.patch("/status/:id", verifyToken, verifyAdmin, updateProductStatus);
 
 //Get top selling products
 productRouter.get("/top-selling", getTopSellingProducts);
@@ -43,6 +49,9 @@ productRouter.put("/update/:id",verifyToken,verifyAdmin, updateProduct);
 productRouter.patch("/delete/:id",verifyToken,verifyAdmin,deleteProduct)
 // Preferred RESTful delete
 productRouter.delete("/:id", verifyToken, verifyAdmin, deleteProduct)
+
+// Hard delete Product (permanently remove from database)
+productRouter.delete("/admin/hard-delete/:id", verifyToken, verifyAdmin, hardDeleteProduct)
 
 //Get Product data category and subcategory wise
 productRouter.get("/:category/:subCategory", getProductsByCategory);
