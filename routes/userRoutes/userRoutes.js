@@ -1,5 +1,6 @@
 const express = require('express');
-const { registerUser, loginUser, getAllUsers, updateUserRole, trackLogin, checkLock, userRole, updateUserProfile, updateUserStatus } = require('../../controllers/userControllers/userControllers');
+
+const { registerUser, loginUser, getAllUsers, updateUserRole, trackLogin, checkLock, userRole, updateUserProfile, deleteUserAccount, updateUserStatus } = require('../../controllers/userControllers/userControllers');
 const { client } = require('../../config/mongoDB');
 const db = client.db('techLight');
 const usersCollections = db.collection('users');
@@ -32,7 +33,10 @@ userRouter.get("/role/:email", userRole);
 userRouter.patch("/:email", verifyToken, upload.single('avatar'), updateUserProfile);
 
 //Update user role
-userRouter.patch("/role/:id",verifyToken,verifyAdmin,updateUserRole)
+userRouter.patch("/role/:id", verifyToken, verifyAdmin, updateUserRole)
+
+//Delete user account
+userRouter.put("/account/:email/delete", verifyToken, deleteUserAccount);
 
 // Update user status (ban/unban)
 userRouter.patch("/status/:id", verifyToken, verifyAdmin, updateUserStatus)

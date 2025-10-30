@@ -373,7 +373,7 @@ const testPayment = async (req, res) => {
   res.json({ message: "Test endpoint working", received: req.body });
 };
 
-// Get Payment Details
+// Get Payment Details by Transaction ID
 const getPaymentDetails = async (req, res) => {
   try {
     const { tranId } = req.params;
@@ -381,6 +381,21 @@ const getPaymentDetails = async (req, res) => {
       return res.status(400).json({ message: "Transaction ID is required" });
 
     const payment = await paymentsCollection.findOne({ tran_id: tranId });
+    if (!payment) return res.status(404).json({ message: "Payment not found" });
+
+    res.json(payment);
+  } catch {
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+// Get Payment Details by Order ID
+const getPaymentDetailsByOrderId = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    if (!orderId) return res.status(400).json({ message: "Order ID is required" });
+
+    const payment = await paymentsCollection.findOne({ order_id: orderId });
     if (!payment) return res.status(404).json({ message: "Payment not found" });
 
     res.json(payment);
@@ -583,6 +598,353 @@ const getPaymentStats = async (req, res) => {
   }
 };
 
+// Get seller earnings data with product images
+const getSellerEarnings = async (req, res) => {
+  try {
+    const sellerEmail = req.user?.email; // From verifyToken middleware
+
+    if (!sellerEmail) {
+      return res.status(401).json({ message: "Seller email not found" });
+    }
+
+    // Get query parameters for filtering
+    const { startDate, endDate } = req.query;
+
+    // Build match query for payments where the seller's products were sold
+    const matchQuery = {
+      "products.seller.email": sellerEmail,
+      status: "success",
+      paidStatus: true
+    };
+
+    // Add date filters if provided
+    if (startDate || endDate) {
+      matchQuery.createdAt = {};
+      if (startDate) matchQuery.createdAt.$gte = new Date(startDate);
+      if (endDate) matchQuery.createdAt.$lte = new Date(endDate);
+    }
+
+    // Aggregate pipeline to calculate earnings per product
+    const pipeline = [
+      { $match: matchQuery },
+      { $unwind: "$products" },
+      { $match: { "products.seller.email": sellerEmail } },
+      {
+        $group: {
+          _id: {
+            productId: "$products.productId",
+            productName: "$products.name"
+          },
+          totalSold: { $sum: "$products.quantity" },
+          totalEarnings: { $sum: { $multiply: ["$products.price", "$products.quantity"] } },
+          transactions: { $push: { createdAt: "$createdAt", quantity: "$products.quantity", price: "$products.price" } }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          productId: "$_id.productId",
+          productName: "$_id.productName",
+          totalSold: 1,
+          totalEarnings: 1,
+          transactions: 1,
+          status: { $literal: "Completed" } // All are completed since we filtered by success
+        }
+      }
+    ];
+
+    const earningsData = await paymentsCollection.aggregate(pipeline).toArray();
+
+    // Fetch product images for each product
+    const productIds = earningsData.map(item => item.productId).filter(id => id);
+    let productImages = {};
+    
+    if (productIds.length > 0) {
+      const objectIds = productIds.map(id => new ObjectId(id));
+      const products = await productsCollection.find(
+        { _id: { $in: objectIds } },
+        { projection: { _id: 1, images: 1 } }
+      ).toArray();
+      
+      productImages = products.reduce((acc, product) => {
+        acc[product._id.toString()] = product.images?.featured || product.images?.[0] || null;
+        return acc;
+      }, {});
+    }
+
+    // Add images to earnings data
+    const earningsDataWithImages = earningsData.map(item => ({
+      ...item,
+      image: productImages[item.productId] || null
+    }));
+
+    // Calculate summary statistics
+    const totalSales = earningsDataWithImages.reduce((sum, product) => sum + product.totalEarnings, 0);
+    const totalSold = earningsDataWithImages.reduce((sum, product) => sum + product.totalSold, 0);
+    const completedPayout = totalSales; // Assuming all earnings are completed
+    const pendingPayout = 0; // No pending for successful transactions
+
+    res.json({
+      success: true,
+      data: {
+        products: earningsDataWithImages,
+        summary: {
+          totalSales,
+          totalSold,
+          completedPayout,
+          pendingPayout
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching seller earnings:', error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+// Get seller dashboard overview data
+const getSellerDashboardOverview = async (req, res) => {
+  try {
+    const sellerEmail = req.user?.email; // From verifyToken middleware
+
+    if (!sellerEmail) {
+      return res.status(401).json({ message: "Seller email not found" });
+    }
+
+    // Get total products count for this seller
+    const totalProducts = await productsCollection.countDocuments({
+      "createdBy.email": sellerEmail
+    });
+
+    // Get total orders count for this seller's products
+    const totalOrders = await paymentsCollection.countDocuments({
+      "products.seller.email": sellerEmail,
+      status: "success",
+      paidStatus: true
+    });
+
+    // Get total earnings for this seller
+    const earningsPipeline = [
+      { $match: { 
+        "products.seller.email": sellerEmail,
+        status: "success",
+        paidStatus: true
+      }},
+      { $unwind: "$products" },
+      { $match: { "products.seller.email": sellerEmail } },
+      {
+        $group: {
+          _id: null,
+          totalEarnings: { $sum: { $multiply: ["$products.price", "$products.quantity"] } }
+        }
+      }
+    ];
+
+    const earningsResult = await paymentsCollection.aggregate(earningsPipeline).toArray();
+    const totalEarnings = earningsResult[0]?.totalEarnings || 0;
+
+    // Get average product rating for this seller
+    const products = await productsCollection.find({
+      "createdBy.email": sellerEmail
+    }).toArray();
+
+    let averageRating = 0;
+    if (products.length > 0) {
+      // Get all product IDs
+      const productIds = products.map(item => item._id);
+
+      // Get reviews collection
+      const productReviewsCollection = db.collection("productReviews");
+
+      // Get reviews for all these products
+      const reviews = await productReviewsCollection
+        .find({
+          productId: { $in: productIds },
+          status: "approved"
+        })
+        .toArray();
+
+      if (reviews.length > 0) {
+        // Calculate average rating
+        const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+        averageRating = parseFloat((totalRating / reviews.length).toFixed(1));
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        products: totalProducts,
+        orders: totalOrders,
+        earnings: totalEarnings,
+        rating: averageRating
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching seller dashboard overview:', error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+// Get seller sales analytics data
+const getSellerSalesAnalytics = async (req, res) => {
+  try {
+    const sellerEmail = req.user?.email; // From verifyToken middleware
+    const { period = '7' } = req.query; // Default to 7 days
+
+    if (!sellerEmail) {
+      return res.status(401).json({ message: "Seller email not found" });
+    }
+
+    // Determine date range based on period
+    const now = new Date();
+    let startDate;
+    
+    switch (period) {
+      case '7':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+        break;
+      case '30':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
+        break;
+      case '365':
+        startDate = new Date(now.getFullYear(), now.getMonth() - 12, now.getDate());
+        break;
+      default:
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+    }
+
+    // For daily data in the selected period
+    const dailyData = [];
+    const daysToShow = period === '7' ? 7 : period === '30' ? 30 : 12; // 12 months for yearly
+    
+    if (period === '7' || period === '30') {
+      // Daily data for 7 or 30 days
+      for (let i = daysToShow - 1; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        date.setHours(0, 0, 0, 0);
+        
+        const endDate = new Date(date);
+        endDate.setDate(endDate.getDate() + 1);
+        
+        // Get payments for this day
+        const payments = await paymentsCollection.find({
+          "products.seller.email": sellerEmail,
+          status: "success",
+          paidStatus: true,
+          createdAt: {
+            $gte: date,
+            $lt: endDate
+          }
+        }).toArray();
+        
+        // Calculate total sales and orders for this day
+        let totalSales = 0;
+        let totalOrders = payments.length;
+        
+        payments.forEach(payment => {
+          payment.products.forEach(product => {
+            if (product.seller.email === sellerEmail) {
+              totalSales += product.price * product.quantity;
+            }
+          });
+        });
+        
+        dailyData.push({
+          date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          sales: totalSales,
+          orders: totalOrders
+        });
+      }
+    } else {
+      // Monthly data for 1 year
+      for (let i = 11; i >= 0; i--) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const endDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+        
+        // Get payments for this month
+        const payments = await paymentsCollection.find({
+          "products.seller.email": sellerEmail,
+          status: "success",
+          paidStatus: true,
+          createdAt: {
+            $gte: date,
+            $lt: endDate
+          }
+        }).toArray();
+        
+        // Calculate total sales and orders for this month
+        let totalSales = 0;
+        let totalOrders = payments.length;
+        
+        payments.forEach(payment => {
+          payment.products.forEach(product => {
+            if (product.seller.email === sellerEmail) {
+              totalSales += product.price * product.quantity;
+            }
+          });
+        });
+        
+        dailyData.push({
+          date: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          sales: totalSales,
+          orders: totalOrders
+        });
+      }
+    }
+
+    // Get recent orders (last 5)
+    const recentOrdersPipeline = [
+      { $match: { 
+        "products.seller.email": sellerEmail,
+        status: "success",
+        paidStatus: true
+      }},
+      { $sort: { createdAt: -1 } },
+      { $limit: 5 },
+      { $unwind: "$products" },
+      { $match: { "products.seller.email": sellerEmail } },
+      {
+        $project: {
+          orderId: "$order_id",
+          product: "$products.name",
+          date: "$createdAt",
+          price: { $multiply: ["$products.price", "$products.quantity"] },
+          status: { $literal: "Completed" }
+        }
+      }
+    ];
+
+    const recentOrdersResult = await paymentsCollection.aggregate(recentOrdersPipeline).toArray();
+    
+    // Format recent orders
+    const recentOrders = recentOrdersResult.map(order => ({
+      id: order.orderId,
+      product: order.product,
+      date: new Date(order.date).toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      }),
+      status: order.status,
+      price: `$${order.price.toFixed(2)}`
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        chartData: dailyData,
+        recentOrders,
+        period
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching seller sales analytics:', error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
 module.exports = {
   getPayments,
   updatePaymentStatus,
@@ -592,8 +954,14 @@ module.exports = {
   paymentCancel,
   testPayment,
   getPaymentDetails,
+  getPaymentDetailsByOrderId,
   getUserPayments,
   checkProducts,
   getAllPayments,
   getPaymentStats,
+  getSellerEarnings,
+  getSellerDashboardOverview,
+  getSellerSalesAnalytics, 
+  paymentsCollection
 };
+  

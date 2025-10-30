@@ -811,6 +811,90 @@ const updateProductStatus = async (req, res, next) => {
       message: "Product status updated successfully",
       result
     });
+  }
+  catch{
+    console.log("asdfas");
+
+  }
+}
+//Get Products by Seller
+const getProductsBySeller = async (req, res, next) => {
+  try {
+    const sellerEmail = req.decoded; // Get seller email from auth middleware
+    const page = Math.max(parseInt(req.query.page || '1', 10), 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit || '10', 10), 1), 100);
+    const skip = (page - 1) * limit;
+    const search = req.query.search || '';
+    const status = req.query.status || '';
+
+    // Build filter
+    const filter = { 'createdBy.email': sellerEmail };
+
+    // Add search filter if provided
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { category: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // Add status filter if provided
+    if (status && status !== 'All') {
+      filter.status = status.toLowerCase();
+    }
+
+    const [items, total] = await Promise.all([
+      productsCollection
+        .find(filter)
+        .skip(skip)
+        .limit(limit)
+        .sort({ created_at: -1 }) // Sort by newest first
+        .toArray(),
+      productsCollection.countDocuments(filter),
+    ]);
+
+    // Add dynamic ratings to all products
+    if (items.length > 0) {
+      // Get all product IDs
+      const productIds = items.map(item => item._id);
+
+      // Get reviews for all these products
+      const reviews = await productReviewsCollection
+        .find({
+          productId: { $in: productIds },
+          status: "approved"
+        })
+        .toArray();
+
+      // Group reviews by product ID
+      const reviewsByProduct = {};
+      reviews.forEach(review => {
+        const productId = review.productId.toString();
+        if (!reviewsByProduct[productId]) {
+          reviewsByProduct[productId] = [];
+        }
+        reviewsByProduct[productId].push(review);
+      });
+
+      // Calculate dynamic ratings for each product
+      items.forEach(item => {
+        const productId = item._id.toString();
+        const productReviews = reviewsByProduct[productId] || [];
+
+        if (productReviews.length > 0) {
+          // Calculate average rating
+          const totalRating = productReviews.reduce((sum, review) => sum + review.rating, 0);
+          const averageRating = totalRating / productReviews.length;
+
+          // Add dynamic rating and total reviews to product data
+          item.rating = parseFloat(averageRating.toFixed(1));
+          item.totalReviews = productReviews.length;
+        }
+      });
+    }
+
+    res.status(200).send({ data: items, page, limit, total });
   } catch (error) {
     next(error);
   }
@@ -831,5 +915,6 @@ module.exports = {
   getTopSellingProducts,
   getHighRatedProducts,
   getDiscountedProducts,
-  getSelectedProducts
+  getSelectedProducts,
+  getProductsBySeller
 };
