@@ -725,6 +725,114 @@ const getSellerDashboardOverview = async (req, res) => {
   }
 };
 
+// Get seller sales analytics data
+const getSellerSalesAnalytics = async (req, res) => {
+  try {
+    const sellerEmail = req.user?.email; // From verifyToken middleware
+
+    if (!sellerEmail) {
+      return res.status(401).json({ message: "Seller email not found" });
+    }
+
+    // Get the last 7 months of data
+    const now = new Date();
+    const months = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthName = d.toLocaleString("default", { month: "short" });
+      months.push({
+        date: d,
+        name: monthName,
+        year: d.getFullYear()
+      });
+    }
+
+    // Get sales data for each month
+    const chartData = [];
+    for (const month of months) {
+      const startDate = new Date(month.date.getFullYear(), month.date.getMonth(), 1);
+      const endDate = new Date(month.date.getFullYear(), month.date.getMonth() + 1, 1);
+      
+      // Get payments for this month
+      const payments = await paymentsCollection.find({
+        "products.seller.email": sellerEmail,
+        status: "success",
+        paidStatus: true,
+        createdAt: {
+          $gte: startDate,
+          $lt: endDate
+        }
+      }).toArray();
+      
+      // Calculate total sales and orders for this month
+      let totalSales = 0;
+      let totalOrders = payments.length;
+      
+      payments.forEach(payment => {
+        payment.products.forEach(product => {
+          if (product.seller.email === sellerEmail) {
+            totalSales += product.price * product.quantity;
+          }
+        });
+      });
+      
+      chartData.push({
+        month: month.name,
+        sales: totalSales,
+        orders: totalOrders
+      });
+    }
+
+    // Get recent orders (last 5)
+    const recentOrdersPipeline = [
+      { $match: { 
+        "products.seller.email": sellerEmail,
+        status: "success",
+        paidStatus: true
+      }},
+      { $sort: { createdAt: -1 } },
+      { $limit: 5 },
+      { $unwind: "$products" },
+      { $match: { "products.seller.email": sellerEmail } },
+      {
+        $project: {
+          orderId: "$order_id",
+          product: "$products.name",
+          date: "$createdAt",
+          price: { $multiply: ["$products.price", "$products.quantity"] },
+          status: { $literal: "Completed" }
+        }
+      }
+    ];
+
+    const recentOrdersResult = await paymentsCollection.aggregate(recentOrdersPipeline).toArray();
+    
+    // Format recent orders
+    const recentOrders = recentOrdersResult.map(order => ({
+      id: order.orderId,
+      product: order.product,
+      date: new Date(order.date).toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      }),
+      status: order.status,
+      price: `$${order.price.toFixed(2)}`
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        chartData,
+        recentOrders
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching seller sales analytics:', error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
 module.exports = {
   getPayments,
   createPayment,
@@ -738,5 +846,6 @@ module.exports = {
   getAllPayments,
   getPaymentStats,
   getSellerEarnings,
-  getSellerDashboardOverview
+  getSellerDashboardOverview,
+  getSellerSalesAnalytics
 };
