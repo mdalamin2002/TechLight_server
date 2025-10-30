@@ -3,6 +3,7 @@ const { client } = require("../../config/mongoDB");
 const db = client.db("techLight");
 const createError = require("http-errors");
 const productReviewsCollection = db.collection("productReviews");
+const productsCollection = db.collection("products");
 
 // Create a new product review
 const createProductReview = async (req, res, next) => {
@@ -288,11 +289,184 @@ const getUserProductReview = async (req, res, next) => {
   }
 };
 
+// Get all approved reviews for homepage
+const getAllApprovedReviews = async (req, res, next) => {
+  try {
+    const { limit = 12 } = req.query;
+
+    console.log("Fetching reviews from database...");
+    const reviews = await productReviewsCollection
+      .find({ status: "approved" })
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .toArray();
+
+    console.log("Found reviews:", reviews.length);
+
+    // Get product details for each review - ONLY APPROVED PRODUCTS
+    const productIds = reviews.map(review => review.productId);
+    const products = await productsCollection
+      .find({ _id: { $in: productIds }, status: "approved" })
+      .toArray();
+
+    // Create a map of products for quick lookup
+    const productMap = {};
+    products.forEach(product => {
+      productMap[product._id.toString()] = product;
+    });
+
+    // Combine review data with product information
+    const enrichedReviews = reviews.map(review => {
+      const product = productMap[review.productId.toString()];
+      return {
+        _id: review._id,
+        userName: review.userName || "Anonymous",
+        userPhotoURL: review.userPhotoURL || `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 20) + 1}`,
+        rating: review.rating,
+        createdAt: review.createdAt,
+        comment: review.comment || review.title || "Great product!",
+        productName: product ? product.name : "Unknown Product",
+        helpful: review.helpful || 0,
+        verified: review.verified || true,
+        status: review.status || "approved" // Include the actual status from the database
+      };
+    });
+
+    console.log("Sending response with reviews:", enrichedReviews.length);
+    res.status(200).json({
+      success: true,
+      data: enrichedReviews,
+      total: enrichedReviews.length
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get all reviews for homepage (for moderators)
+const getAllReviewsForModerator = async (req, res, next) => {
+  try {
+    const { limit = 50 } = req.query; // Increase limit for moderators
+
+    // For moderators, fetch all reviews regardless of status
+    const reviews = await productReviewsCollection
+      .find({})
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .toArray();
+
+    // Get product details for each review - ONLY APPROVED PRODUCTS
+    const productIds = reviews.map(review => review.productId);
+    const products = await productsCollection
+      .find({ _id: { $in: productIds }, status: "approved" })
+      .toArray();
+
+    // Create a map of products for quick lookup
+    const productMap = {};
+    products.forEach(product => {
+      productMap[product._id.toString()] = product;
+    });
+
+    // Combine review data with product information
+    const enrichedReviews = reviews.map(review => {
+      const product = productMap[review.productId.toString()];
+      return {
+        _id: review._id,
+        userName: review.userName || "Anonymous",
+        userPhotoURL: review.userPhotoURL || `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 20) + 1}`,
+        rating: review.rating,
+        createdAt: review.createdAt,
+        comment: review.comment || review.title || "Great product!",
+        productName: product ? product.name : "Unknown Product",
+        helpful: review.helpful || 0,
+        verified: review.verified || true,
+        status: review.status || "approved" // Include the actual status from the database
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      data: enrichedReviews,
+      total: enrichedReviews.length
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Update review status (for moderators)
+const updateReviewStatus = async (req, res, next) => {
+  try {
+    const { reviewId } = req.params;
+    const { status } = req.body;
+
+    if (!ObjectId.isValid(reviewId)) {
+      return next(createError(400, "Invalid review ID"));
+    }
+
+    // Validate status - convert to lowercase for consistency
+    const validStatuses = ["approved", "pending", "rejected"];
+    const normalizedStatus = status.toLowerCase();
+
+    if (!validStatuses.includes(normalizedStatus)) {
+      return next(createError(400, "Invalid status value"));
+    }
+
+    const result = await productReviewsCollection.updateOne(
+      { _id: new ObjectId(reviewId) },
+      { $set: { status: normalizedStatus, updatedAt: new Date() } }
+    );
+
+    if (result.matchedCount === 0) {
+      return next(createError(404, "Review not found"));
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Review ${normalizedStatus} successfully`
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Delete a product review (for moderators)
+const deleteReviewByModerator = async (req, res, next) => {
+  try {
+    const { reviewId } = req.params;
+
+    if (!ObjectId.isValid(reviewId)) {
+      return next(createError(400, "Invalid review ID"));
+    }
+
+    const result = await productReviewsCollection.deleteOne({
+      _id: new ObjectId(reviewId)
+    });
+
+    if (result.deletedCount === 0) {
+      return next(createError(404, "Review not found"));
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Review deleted successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createProductReview,
   getProductReviews,
   updateProductReview,
   deleteProductReview,
   markReviewHelpful,
-  getUserProductReview
+  getUserProductReview,
+  getAllApprovedReviews,
+  getAllReviewsForModerator, // Add this new function
+  updateReviewStatus,
+  deleteReviewByModerator
 };

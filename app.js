@@ -18,6 +18,7 @@ const wishlistRouter = require("./routes/wishlistRoutes/wishlistRoutes");
 const userSupportRouter = require("./routes/userSupportRoutes/userSupportRoutes");
 const userOrderRouter = require("./routes/userOrderRoutes/userOrderRoutes");
 const ordersProductRouter = require("./routes/ordersProductRoutes/ordersProductRoutes");
+const moderatorOrdersRouter = require("./routes/ordersProductRoutes/moderatorOrdersRoutes");
 const usersReviewsRouter = require("./routes/usersReviewsRouter/usersReviewsRouter");
 const cartRouter = require("./routes/addToCartRoutes/addToCartRoutes");
 const returnRouter = require("./routes/returnRoutes/returnRoutes");
@@ -27,6 +28,7 @@ const rateLimit = require('express-rate-limit');
 const { errorHandler, notFoundHandler } = require('./middlewares/errorHandler');
 const aiRouter = require("./routes/aiRoutes/aiRoutes");
 const offersRouter = require("./routes/offersRoutes/offersRoutes");
+const userDashboardRouter = require("./routes/userDashboardOverview/userDashboardOverview");
 const productReviewRouter = require("./routes/productReviewRoutes/productReviewRoutes");
 
 //middleware
@@ -53,8 +55,9 @@ app.use('/api/wishlist', wishlistRouter)
 app.use('/api/cart', cartRouter)
 app.use("/api/addresses", addressRoutes);
 
-//Moderatr routes
+//Moderator routes
 app.use('/api/moderator/orders-products', ordersProductRouter);
+app.use('/api/moderator/orders', moderatorOrdersRouter);
 app.use('/api/moderator/users-reviews', usersReviewsRouter);
 
 //Admin routes
@@ -85,6 +88,9 @@ app.use("/api/banners", bannerRoute);
 // user support routes
 app.use("/api/support/user", userSupportRouter);
 app.use("/api/support/user/all", userSupportRouter);
+
+//user routes
+app.use("/api/user/user_dashboard_overview", userDashboardRouter);
 
 // user order routes
 app.use("/api/user/orders", userOrderRouter);

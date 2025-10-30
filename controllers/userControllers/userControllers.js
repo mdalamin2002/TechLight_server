@@ -18,6 +18,7 @@ const registerUser = async (req, res, next) => {
     userData.role = "user";
     userData.created_at = new Date();
     userData.last_loggedIn = new Date();
+    userData.status = "active";
     userData.failedAttempts = 0;
     userData.lockUntil = null;
     if (!userData.photoURL && !userData.avatar) {
@@ -69,9 +70,9 @@ const checkLock = async (req, res) => {
   if (!user) return res.status(404).send({ allowed: false, message: "User not found" });
 
   if (user.lockUntil && new Date(user.lockUntil) > new Date()) {
-    return res.send({ 
-      allowed: false, 
-      message: `Your account is temporarily locked due to multiple failed login attempts. Please try again after ${user.lockUntil}.` 
+    return res.send({
+      allowed: false,
+      message: `Your account is temporarily locked due to multiple failed login attempts. Please try again after ${user.lockUntil}.`
     });
 
   }
@@ -130,7 +131,7 @@ const updateUserRole = async (req, res, next) => {
     const userId = req.params.id;
     const { newRole } = req.body;
     // validation
-    const allowedRoles = ["admin", "moderator", "user"];
+    const allowedRoles = ["admin", "moderator", "user", "seller"];
     if (!newRole || !allowedRoles.includes(String(newRole).toLowerCase())) {
       return res.status(400).send({ success: false, message: "Invalid role" });
     }
@@ -139,13 +140,46 @@ const updateUserRole = async (req, res, next) => {
       $set: { role: String(newRole).toLowerCase(), updated_at: new Date() },
     };
     const result = await usersCollections.updateOne(query, updateRole);
-    res.status(200).send({ success: true, modifiedCount: result.modifiedCount });
+
+    if (result.modifiedCount > 0) {
+      res.status(200).send({ success: true, modifiedCount: result.modifiedCount });
+    } else {
+      res.status(404).send({ success: false, message: "User not found or no changes made" });
+    }
   } catch (error) {
     next(error);
   }
 };
 
-module.exports = { registerUser, loginUser, usersCollections, getAllUsers, updateUserRole, trackLogin, checkLock,userRole };
+// Ban/unban user
+const updateUserStatus = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+    const { status } = req.body;
+
+    // Validation
+    const allowedStatuses = ["active", "blocked", "deleted"];
+    if (!status || !allowedStatuses.includes(String(status).toLowerCase())) {
+      return res.status(400).send({ success: false, message: "Invalid status" });
+    }
+
+    const query = { _id: new ObjectId(userId) };
+    const updateStatus = {
+      $set: { status: String(status).toLowerCase(), updated_at: new Date() },
+    };
+
+    const result = await usersCollections.updateOne(query, updateStatus);
+
+    if (result.modifiedCount > 0) {
+      res.status(200).send({ success: true, modifiedCount: result.modifiedCount });
+    } else {
+      res.status(404).send({ success: false, message: "User not found or no changes made" });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Update user profile (name, phone, avatar)
 const updateUserProfile = async (req, res, next) => {
   try {
@@ -187,14 +221,32 @@ const updateUserProfile = async (req, res, next) => {
   }
 };
 
-module.exports = { 
-  registerUser, 
-  loginUser, 
-  usersCollections, 
-  getAllUsers, 
-  updateUserRole, 
-  trackLogin, 
+const deleteUserAccount = async (req, res, next) => {
+  try {
+    const email = req.params.email;
+    const decodedEmail = req.decoded;
+    if (email !== decodedEmail) {
+      return res.status(401).send({ message: "Unauthorize access" });
+    }
+    const user = await usersCollections.findOne({ email });
+    if (!user) return res.status(404).send({ message: "User not found" });
+    const result = await usersCollections.updateOne({ email }, { $set: { status: "inactive" } });
+    res.status(200).send(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = {
+  registerUser,
+  loginUser,
+  usersCollections,
+  getAllUsers,
+  updateUserRole,
+  trackLogin,
   checkLock,
   userRole,
-  updateUserProfile
+  updateUserProfile,
+  deleteUserAccount,
+  updateUserStatus
 };
