@@ -641,6 +641,90 @@ const getSellerEarnings = async (req, res) => {
   }
 };
 
+// Get seller dashboard overview data
+const getSellerDashboardOverview = async (req, res) => {
+  try {
+    const sellerEmail = req.user?.email; // From verifyToken middleware
+
+    if (!sellerEmail) {
+      return res.status(401).json({ message: "Seller email not found" });
+    }
+
+    // Get total products count for this seller
+    const totalProducts = await productsCollection.countDocuments({
+      "createdBy.email": sellerEmail
+    });
+
+    // Get total orders count for this seller's products
+    const totalOrders = await paymentsCollection.countDocuments({
+      "products.seller.email": sellerEmail,
+      status: "success",
+      paidStatus: true
+    });
+
+    // Get total earnings for this seller
+    const earningsPipeline = [
+      { $match: { 
+        "products.seller.email": sellerEmail,
+        status: "success",
+        paidStatus: true
+      }},
+      { $unwind: "$products" },
+      { $match: { "products.seller.email": sellerEmail } },
+      {
+        $group: {
+          _id: null,
+          totalEarnings: { $sum: { $multiply: ["$products.price", "$products.quantity"] } }
+        }
+      }
+    ];
+
+    const earningsResult = await paymentsCollection.aggregate(earningsPipeline).toArray();
+    const totalEarnings = earningsResult[0]?.totalEarnings || 0;
+
+    // Get average product rating for this seller
+    const products = await productsCollection.find({
+      "createdBy.email": sellerEmail
+    }).toArray();
+
+    let averageRating = 0;
+    if (products.length > 0) {
+      // Get all product IDs
+      const productIds = products.map(item => item._id);
+
+      // Get reviews collection
+      const productReviewsCollection = db.collection("productReviews");
+
+      // Get reviews for all these products
+      const reviews = await productReviewsCollection
+        .find({
+          productId: { $in: productIds },
+          status: "approved"
+        })
+        .toArray();
+
+      if (reviews.length > 0) {
+        // Calculate average rating
+        const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+        averageRating = parseFloat((totalRating / reviews.length).toFixed(1));
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        products: totalProducts,
+        orders: totalOrders,
+        earnings: totalEarnings,
+        rating: averageRating
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching seller dashboard overview:', error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
 module.exports = {
   getPayments,
   createPayment,
@@ -653,5 +737,6 @@ module.exports = {
   checkProducts,
   getAllPayments,
   getPaymentStats,
-  getSellerEarnings
+  getSellerEarnings,
+  getSellerDashboardOverview
 };
