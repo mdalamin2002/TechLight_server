@@ -63,23 +63,46 @@ const updateOffer = async (req, res, next) => {
     const { id } = req.params;
     const offer = req.body;
 
+    console.log("Update request received", { id, offer });
+
     // Ensure discount ends with %
     if (offer.discount && !offer.discount.endsWith("%")) {
       offer.discount += "%";
     }
 
-    const result = await offersCollections.findOneAndUpdate(
-      { _id: new  ObjectId(id) },
-      { $set: offer },
-      { returnDocument: "after" }
-    );
+    // Validate ObjectId
+    if (!ObjectId.isValid(id)) {
+      console.log("Invalid ID provided:", id);
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
 
-    if (!result.value) {
+    // First, check if the offer exists
+    const existingOffer = await offersCollections.findOne({ _id: new ObjectId(id) });
+    if (!existingOffer) {
+      console.log("Offer not found with ID:", id);
       return res.status(404).json({ message: "Offer not found" });
     }
 
-    res.status(200).json({ message: "Offer updated successfully", offer: result.value });
+    // Update the offer
+    const updateResult = await offersCollections.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: offer }
+    );
+
+    console.log("Update result:", updateResult);
+
+    // Check if the operation was acknowledged and if a document was matched
+    if (!updateResult || updateResult.matchedCount === 0) {
+      console.log("Failed to update offer with ID:", id);
+      return res.status(500).json({ message: "Failed to update offer" });
+    }
+
+    // Fetch the updated offer
+    const updatedOffer = await offersCollections.findOne({ _id: new ObjectId(id) });
+
+    res.status(200).json({ message: "Offer updated successfully", offer: updatedOffer });
   } catch (error) {
+    console.error("Update error:", error);
     next(error);
   }
 };
