@@ -271,5 +271,7 @@ module.exports = {
   getUserOrders,
   getUserOrderById,
   getUserOrderStats,
-  getSellerOrders
+  getSellerOrders, 
+  ordersCollection
 };
+  

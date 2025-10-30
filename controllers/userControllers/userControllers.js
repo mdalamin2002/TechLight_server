@@ -18,6 +18,7 @@ const registerUser = async (req, res, next) => {
     userData.role = "user";
     userData.created_at = new Date();
     userData.last_loggedIn = new Date();
+    userData.status = "active";
     userData.failedAttempts = 0;
     userData.lockUntil = null;
     if (!userData.photoURL && !userData.avatar) {
@@ -187,6 +188,22 @@ const updateUserProfile = async (req, res, next) => {
   }
 };
 
+const deleteUserAccount = async (req, res, next) => {
+  try {
+    const email = req.params.email;
+    const decodedEmail = req.decoded;
+    if (email !== decodedEmail) {
+      return res.status(401).send({ message: "Unauthorize access" });
+    }
+    const user = await usersCollections.findOne({ email });
+    if (!user) return res.status(404).send({ message: "User not found" });
+    const result = await usersCollections.updateOne({ email }, { $set: { status: "inactive" } });
+    res.status(200).send(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = { 
   registerUser, 
   loginUser, 
@@ -196,5 +213,6 @@ module.exports = {
   trackLogin, 
   checkLock,
   userRole,
-  updateUserProfile
+  updateUserProfile,
+  deleteUserAccount
 };
