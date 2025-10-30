@@ -28,6 +28,7 @@ const { errorHandler, notFoundHandler } = require('./middlewares/errorHandler');
 const aiRouter = require("./routes/aiRoutes/aiRoutes");
 const offersRouter = require("./routes/offersRoutes/offersRoutes");
 const userDashboardRouter = require("./routes/userDashboardOverview/userDashboardOverview");
+const productReviewRouter = require("./routes/productReviewRoutes/productReviewRoutes");
 
 //middleware
 app.use(cors());
@@ -78,7 +79,7 @@ app.use("/api/support", supportRoute);
 app.use("/api/support", supportConversationRoute);
 // Support Messages (Chat System)
 app.use("/api/support", supportMessageRoute);
-// banners routes 
+// banners routes
 // banners routes
 app.use("/api/banners", bannerRoute);
 
@@ -92,6 +93,9 @@ app.use("/api/user/user_dashboard_overview", userDashboardRouter);
 // user order routes
 app.use("/api/user/orders", userOrderRouter);
 app.use("/api/ai", aiRouter);
+
+// product review routes
+app.use("/api/reviews", productReviewRouter);
 
 
 // 404 and error handlers
