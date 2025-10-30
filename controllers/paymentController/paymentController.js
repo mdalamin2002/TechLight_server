@@ -28,6 +28,52 @@ const getPayments = async (req, res, next) => {
   }
 };
 
+// Update payment/order status
+const updatePaymentStatus = async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({ message: "Status is required" });
+    }
+
+    // Validate status
+    const validStatuses = ['pending', 'success', 'failed', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ message: "Invalid status value" });
+    }
+
+    const updateData = {
+      status,
+      updatedAt: new Date()
+    };
+
+    // Add specific timestamps based on status
+    if (status === 'success') {
+      updateData.paidStatus = true;
+      updateData.paidAt = new Date();
+    } else if (status === 'failed') {
+      updateData.failedAt = new Date();
+    } else if (status === 'cancelled') {
+      updateData.cancelledAt = new Date();
+    }
+
+    const result = await paymentsCollection.updateOne(
+      { _id: new ObjectId(paymentId) },
+      { $set: updateData }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ message: "Payment not found" });
+    }
+
+    res.json({ message: "Payment status updated successfully" });
+  } catch (error) {
+    console.error('Error updating payment status:', error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
 
 // Generate Custom IDs
 function generateCustomId(prefix, length = 6) {
@@ -519,14 +565,14 @@ const getPaymentStats = async (req, res) => {
     const previousRevenue = previousRevenueResult[0]?.total || 0;
 
     // Calculate revenue growth percentage
-    const revenueGrowth = previousRevenue > 0 
+    const revenueGrowth = previousRevenue > 0
       ? (((recentRevenue - previousRevenue) / previousRevenue) * 100).toFixed(1)
       : 100;
 
     // Recent transactions count
     const recentTransactions = await paymentsCollection.countDocuments({ createdAt: { $gte: daysAgo } });
-    const previousTransactions = await paymentsCollection.countDocuments({ 
-      createdAt: { $gte: previousPeriodStart, $lt: daysAgo } 
+    const previousTransactions = await paymentsCollection.countDocuments({
+      createdAt: { $gte: previousPeriodStart, $lt: daysAgo }
     });
     const transactionGrowth = previousTransactions > 0
       ? (((recentTransactions - previousTransactions) / previousTransactions) * 100).toFixed(1)
@@ -901,6 +947,7 @@ const getSellerSalesAnalytics = async (req, res) => {
 
 module.exports = {
   getPayments,
+  updatePaymentStatus,
   createPayment,
   paymentSuccess,
   paymentFail,

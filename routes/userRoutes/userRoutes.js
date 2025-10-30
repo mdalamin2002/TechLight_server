@@ -1,5 +1,6 @@
 const express = require('express');
-const { registerUser, loginUser, getAllUsers, updateUserRole, trackLogin, checkLock, userRole, updateUserProfile, deleteUserAccount } = require('../../controllers/userControllers/userControllers');
+
+const { registerUser, loginUser, getAllUsers, updateUserRole, trackLogin, checkLock, userRole, updateUserProfile, deleteUserAccount, updateUserStatus } = require('../../controllers/userControllers/userControllers');
 const { client } = require('../../config/mongoDB');
 const db = client.db('techLight');
 const usersCollections = db.collection('users');
@@ -12,7 +13,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 //Register User
 userRouter.post("/auth/register", registerUser);
 
-//Get all users 
+//Get all users
 userRouter.get("/", verifyToken, verifyAdmin, getAllUsers);
 // userRouter.get("/",getAllUsers);
 
@@ -25,7 +26,7 @@ userRouter.post("/auth/checkLock", checkLock);
 //Login User
 userRouter.get("/:email", verifyToken, loginUser);
 
-//Getting  User role 
+//Getting  User role
 userRouter.get("/role/:email", userRole);
 
 // Update user profile (name, phone, avatar)
@@ -34,8 +35,11 @@ userRouter.patch("/:email", verifyToken, upload.single('avatar'), updateUserProf
 //Update user role
 userRouter.patch("/role/:id", verifyToken, verifyAdmin, updateUserRole)
 
-//Delete user account 
+//Delete user account
 userRouter.put("/account/:email/delete", verifyToken, deleteUserAccount);
+
+// Update user status (ban/unban)
+userRouter.patch("/status/:id", verifyToken, verifyAdmin, updateUserStatus)
 
 // Bootstrap: if no admin exists, allow the first authenticated user to become admin
 userRouter.post('/bootstrap/admin', verifyToken, async (req, res) => {
