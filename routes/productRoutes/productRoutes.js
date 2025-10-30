@@ -1,5 +1,5 @@
 const express = require('express');
-const { createProduct, getProductsByCategory,getAllProducts, deleteProduct, getSingleProduct, updateProduct, getProductsByOnlyCategory, getTopSellingProducts, getHighRatedProducts, getDiscountedProducts, getSelectedProducts} = require('../../controllers/productControllers/productControllers');
+const { createProduct, getProductsByCategory,getAllProducts, deleteProduct, getSingleProduct, updateProduct, getProductsByOnlyCategory, getTopSellingProducts, getHighRatedProducts, getDiscountedProducts, getSelectedProducts, getProductsBySeller} = require('../../controllers/productControllers/productControllers');
 const { searchProducts, getSearchSuggestions, getCategoriesWithCount } = require('../../controllers/productControllers/searchController');
 const verifyToken = require('../../middlewares/auth');
 const verifyAdmin = require('../../middlewares/admin');
@@ -8,6 +8,9 @@ const productRouter = express.Router();
 
 //Create Product
 productRouter.post("/", verifyToken, createProduct);
+
+//Get Products by Seller (new route)
+productRouter.get("/seller", verifyToken, getProductsBySeller);
 
 //Search products (must come before other GET routes to avoid conflicts)
 productRouter.get("/search", searchProducts);
