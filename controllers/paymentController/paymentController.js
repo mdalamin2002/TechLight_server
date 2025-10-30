@@ -537,6 +537,110 @@ const getPaymentStats = async (req, res) => {
   }
 };
 
+// Get seller earnings data with product images
+const getSellerEarnings = async (req, res) => {
+  try {
+    const sellerEmail = req.user?.email; // From verifyToken middleware
+
+    if (!sellerEmail) {
+      return res.status(401).json({ message: "Seller email not found" });
+    }
+
+    // Get query parameters for filtering
+    const { startDate, endDate } = req.query;
+
+    // Build match query for payments where the seller's products were sold
+    const matchQuery = {
+      "products.seller.email": sellerEmail,
+      status: "success",
+      paidStatus: true
+    };
+
+    // Add date filters if provided
+    if (startDate || endDate) {
+      matchQuery.createdAt = {};
+      if (startDate) matchQuery.createdAt.$gte = new Date(startDate);
+      if (endDate) matchQuery.createdAt.$lte = new Date(endDate);
+    }
+
+    // Aggregate pipeline to calculate earnings per product
+    const pipeline = [
+      { $match: matchQuery },
+      { $unwind: "$products" },
+      { $match: { "products.seller.email": sellerEmail } },
+      {
+        $group: {
+          _id: {
+            productId: "$products.productId",
+            productName: "$products.name"
+          },
+          totalSold: { $sum: "$products.quantity" },
+          totalEarnings: { $sum: { $multiply: ["$products.price", "$products.quantity"] } },
+          transactions: { $push: { createdAt: "$createdAt", quantity: "$products.quantity", price: "$products.price" } }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          productId: "$_id.productId",
+          productName: "$_id.productName",
+          totalSold: 1,
+          totalEarnings: 1,
+          transactions: 1,
+          status: { $literal: "Completed" } // All are completed since we filtered by success
+        }
+      }
+    ];
+
+    const earningsData = await paymentsCollection.aggregate(pipeline).toArray();
+
+    // Fetch product images for each product
+    const productIds = earningsData.map(item => item.productId).filter(id => id);
+    let productImages = {};
+    
+    if (productIds.length > 0) {
+      const objectIds = productIds.map(id => new ObjectId(id));
+      const products = await productsCollection.find(
+        { _id: { $in: objectIds } },
+        { projection: { _id: 1, images: 1 } }
+      ).toArray();
+      
+      productImages = products.reduce((acc, product) => {
+        acc[product._id.toString()] = product.images?.featured || product.images?.[0] || null;
+        return acc;
+      }, {});
+    }
+
+    // Add images to earnings data
+    const earningsDataWithImages = earningsData.map(item => ({
+      ...item,
+      image: productImages[item.productId] || null
+    }));
+
+    // Calculate summary statistics
+    const totalSales = earningsDataWithImages.reduce((sum, product) => sum + product.totalEarnings, 0);
+    const totalSold = earningsDataWithImages.reduce((sum, product) => sum + product.totalSold, 0);
+    const completedPayout = totalSales; // Assuming all earnings are completed
+    const pendingPayout = 0; // No pending for successful transactions
+
+    res.json({
+      success: true,
+      data: {
+        products: earningsDataWithImages,
+        summary: {
+          totalSales,
+          totalSold,
+          completedPayout,
+          pendingPayout
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching seller earnings:', error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
 module.exports = {
   getPayments,
   createPayment,
@@ -549,4 +653,5 @@ module.exports = {
   checkProducts,
   getAllPayments,
   getPaymentStats,
+  getSellerEarnings
 };

@@ -11,6 +11,7 @@ const {
     checkProducts,
     getAllPayments,
     getPaymentStats,
+    getSellerEarnings
 } = require('../../controllers/paymentController/paymentController');
 const verifyToken = require('../../middlewares/auth');
 const verifyAdmin = require('../../middlewares/admin');
@@ -34,6 +35,9 @@ paymentRouter.get("/details/:tranId", getPaymentDetails);
 
 // Get all payments for logged-in user
 paymentRouter.get("/user/orders", verifyToken, getUserPayments);
+
+// Get earnings data for logged-in seller
+paymentRouter.get("/seller/earnings", verifyToken, getSellerEarnings);
 
 // Admin routes
 paymentRouter.get("/admin/all", verifyToken, verifyAdmin, getAllPayments);
