@@ -549,4 +549,5 @@ module.exports = {
   checkProducts,
   getAllPayments,
   getPaymentStats,
+  paymentsCollection
 };

@@ -1,5 +1,8 @@
 const { ObjectId } = require("mongodb");
 const { client } = require("../../config/mongoDB");
+const { paymentsCollection } = require("../paymentController/paymentController");
+const { productsCollection } = require("../productControllers/productControllers");
+const { usersCollections } = require("../userControllers/userControllers");
 const db = client.db("techLight");
 
 const moderatorOrdersCollections = db.collection("moderator_orders");
@@ -13,6 +16,7 @@ const supportCollections = db.collection("support");
 const getModeratorDashboardStats = async (req, res, next) => {
   try {
     // Get counts for different collections
+  
     const [
       pendingOrdersCount,
       shippedOrdersCount,
@@ -41,7 +45,7 @@ const getModeratorDashboardStats = async (req, res, next) => {
       openSupportTickets: openSupportTicketsCount
     };
 
-    res.status(200).json(stats);
+    return(stats);
   } catch (error) {
     next(error);
   }
@@ -51,30 +55,30 @@ const getModeratorDashboardStats = async (req, res, next) => {
 const getModeratorRecentActivities = async (req, res, next) => {
   try {
     // Get recent orders
-    const recentOrders = await moderatorOrdersCollections
-      .find({ status: "Pending" })
+    const recentOrders = await paymentsCollection
+      .find()
       .sort({ createdAt: -1 })
       .limit(3)
       .toArray();
 
     // Get recent product listings
-    const recentProducts = await moderatorProductsCollections
-      .find({ status: "Pending" })
+    const recentProducts = await productsCollection
+      .find()
       .sort({ createdAt: -1 })
       .limit(3)
       .toArray();
 
     // Get recent user reports
-    const recentReports = await moderatorUsersReportsCollections
+    const recentReports = await usersCollections
       .find()
-      .sort({ createdAt: -1 })
+      .sort({ created_at: -1 })
       .limit(3)
       .toArray();
 
     // Combine and format activities
     const activities = [
       ...recentOrders.map(order => ({
-        title: `Order ${order.id}`,
+        title: `Order ${order.order_id}`,
         description: "Pending approval",
         time: getTimeAgo(order.createdAt)
       })),
@@ -84,15 +88,15 @@ const getModeratorRecentActivities = async (req, res, next) => {
         time: getTimeAgo(product.createdAt)
       })),
       ...recentReports.map(report => ({
-        title: `User report`,
-        description: `${report.reason}`,
-        time: getTimeAgo(report.createdAt)
+        title: `New User `,
+        description: `${report.email}`,
+        time: getTimeAgo(report.created_at)
       }))
     ]
       .sort((a, b) => new Date(b.time) - new Date(a.time))
       .slice(0, 3);
 
-    res.status(200).json(activities);
+    return activities
   } catch (error) {
     next(error);
   }
@@ -127,7 +131,7 @@ const getOrderProcessingProgress = async (req, res, next) => {
       ? Math.round((processedOrders / totalOrders) * 100) 
       : 0;
 
-    res.status(200).json({ progress });
+    return progress
   } catch (error) {
     next(error);
   }
